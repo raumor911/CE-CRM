@@ -1,0 +1,5 @@
+{
+  "name": "Sales Cockpit",
+  "description": "MicroApp para la gestión de ventas de Arquitectura y Diseño con pipeline Kanban, análisis de sentimiento por IA y compartición de activos visuales.",
+  "requestFramePermissions": []
+}
