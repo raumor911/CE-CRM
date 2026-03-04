@@ -5,16 +5,19 @@ import { Lead } from '../types';
 import { cn } from '../lib/utils';
 import { differenceInHours, parseISO } from 'date-fns';
 import { useLeadAutomation } from '../hooks/useLeadAutomation';
+import { LeadEditForm } from './modals/LeadEditForm';
 
 interface LeadCardProps {
   lead: Lead;
   onUpdateLead: (id: string, updates: Partial<Lead>) => void;
+  onSelectLead: (lead: Lead) => void;
 }
 
-export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead }) => {
+export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelectLead }) => {
   const { copyProposalLink, scheduleBriefing, formatWhatsAppMessage } = useLeadAutomation();
   const hoursSinceActivity = differenceInHours(new Date(), parseISO(lead.last_activity));
-  const isDelayed = hoursSinceActivity > 48;
+  const isDelayed = hoursSinceActivity > 24; // Threshold from proposal
+  const costOfWait = hoursSinceActivity * 50; // $50/hr from constants
   const [showTimeline, setShowTimeline] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
 
@@ -181,111 +184,126 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead }) => {
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      className={cn(
-        "bg-white dark:bg-zinc-900 rounded-2xl border p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative overflow-hidden group",
-        isDelayed ? "border-rose-500 ring-1 ring-rose-500/20 animate-pulse-subtle" : "border-zinc-200 dark:border-zinc-800"
-      )}
-    >
-      {/* Priority Indicator */}
-      {lead.is_priority && (
-        <div className="absolute -left-8 top-2 rotate-[-45deg] bg-amber-400 text-amber-950 text-[8px] font-black py-1 px-8 z-20 shadow-sm uppercase tracking-tighter">
-          PRIORIDAD
-        </div>
-      )}
-
-      <div className="relative aspect-video rounded-xl overflow-hidden mb-3">
-        <img 
-          src={lead.main_image_url} 
-          alt={lead.project_name} 
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        
-        {isDelayed && (
-          <div className="absolute top-2 right-2 bg-rose-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse z-10">
-            <Clock size={10} />
-            COSTO DE ESPERA
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ scale: 1.02 }}
+        onClick={() => onSelectLead(lead)}
+        className={cn(
+          "bg-white dark:bg-zinc-900 rounded-2xl border p-3 shadow-sm hover:shadow-md transition-all cursor-pointer active:cursor-grabbing relative overflow-hidden group",
+          isDelayed ? "border-rose-500 ring-1 ring-rose-500/20" : "border-zinc-200 dark:border-zinc-800"
+        )}
+      >
+        {/* Priority Indicator */}
+        {lead.is_priority && (
+          <div className="absolute -left-8 top-2 rotate-[-45deg] bg-amber-400 text-amber-950 text-[8px] font-black py-1 px-8 z-20 shadow-sm uppercase tracking-tighter">
+            PRIORIDAD
           </div>
         )}
-      </div>
 
-      <div className="space-y-3">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm truncate max-w-[140px]">
-              {lead.project_name}
-            </h3>
-            <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400 mt-0.5">
-              <DollarSign size={10} />
-              <span className="text-[11px] font-semibold">{lead.budget.toLocaleString()}</span>
+        <div className="relative aspect-video rounded-xl overflow-hidden mb-3">
+          <img 
+            src={lead.main_image_url} 
+            alt={lead.project_name} 
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          
+          {isDelayed && (
+            <div className="absolute top-2 right-2 bg-rose-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse z-10">
+              <Clock size={10} />
+              COST OF WAIT: ${costOfWait.toFixed(0)}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm truncate max-w-[140px]">
+                {lead.project_name}
+              </h3>
+              <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400 mt-0.5">
+                <DollarSign size={10} />
+                <span className="text-[11px] font-semibold">{lead.budget.toLocaleString()}</span>
+              </div>
+            </div>
+            <span className={cn(
+              "text-[9px] px-2 py-0.5 rounded-full border font-bold uppercase tracking-tighter",
+              getSentimentColor(lead.sentiment_label)
+            )}>
+              {lead.sentiment_label}
+            </span>
+          </div>
+
+          {/* Dynamic Content based on Stage */}
+          <div className="min-h-[40px]">
+            {renderStageContent()}
+          </div>
+
+          <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex flex-col gap-2">
+            <button 
+              disabled={isScheduling}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAction();
+              }}
+              className="w-full py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[11px] font-bold hover:bg-white hover:text-black dark:hover:bg-white dark:hover:text-black transition-all flex items-center justify-center gap-2 border border-transparent hover:border-zinc-200 disabled:opacity-50"
+            >
+              {isScheduling ? <Loader2 size={12} className="animate-spin" /> : (lead.stage === 'Propuesta' && <Send size={12} />)}
+              {getActionButtonLabel()}
+            </button>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTimeline(!showTimeline);
+                }}
+                className="flex-1 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors flex items-center justify-center"
+                title="Ver Timeline"
+              >
+                <MessageSquare size={14} />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleWhatsApp();
+                }}
+                className="flex-1 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center justify-center relative group/wa"
+                title="Contactar por WhatsApp"
+              >
+                <div className="relative">
+                  <MessageSquare size={14} />
+                  {lead.whatsapp_interaction_count && lead.whatsapp_interaction_count > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center border border-white dark:border-zinc-900">
+                      {lead.whatsapp_interaction_count}
+                    </span>
+                  )}
+                </div>
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShare();
+                }}
+                className="flex-1 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors flex items-center justify-center"
+                title="Copiar Link de Propuesta"
+              >
+                <ExternalLink size={14} />
+              </button>
             </div>
           </div>
-          <span className={cn(
-            "text-[9px] px-2 py-0.5 rounded-full border font-bold uppercase tracking-tighter",
-            getSentimentColor(lead.sentiment_label)
-          )}>
-            {lead.sentiment_label}
-          </span>
         </div>
 
-        {/* Dynamic Content based on Stage */}
-        <div className="min-h-[40px]">
-          {renderStageContent()}
-        </div>
-
-        <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex flex-col gap-2">
-          <button 
-            disabled={isScheduling}
-            onClick={handleAction}
-            className="w-full py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[11px] font-bold hover:bg-white hover:text-black dark:hover:bg-white dark:hover:text-black transition-all flex items-center justify-center gap-2 border border-transparent hover:border-zinc-200 disabled:opacity-50"
-          >
-            {isScheduling ? <Loader2 size={12} className="animate-spin" /> : (lead.stage === 'Propuesta' && <Send size={12} />)}
-            {getActionButtonLabel()}
-          </button>
-          
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setShowTimeline(!showTimeline)}
-              className="flex-1 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors flex items-center justify-center"
-              title="Ver Timeline"
-            >
-              <MessageSquare size={14} />
-            </button>
-            <button 
-              onClick={handleWhatsApp}
-              className="flex-1 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 transition-colors flex items-center justify-center relative group/wa"
-              title="Contactar por WhatsApp"
-            >
-              <div className="relative">
-                <MessageSquare size={14} />
-                {lead.whatsapp_interaction_count && lead.whatsapp_interaction_count > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center border border-white dark:border-zinc-900">
-                    {lead.whatsapp_interaction_count}
-                  </span>
-                )}
-              </div>
-            </button>
-            <button 
-              onClick={handleShare}
-              className="flex-1 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors flex items-center justify-center"
-              title="Copiar Link de Propuesta"
-            >
-              <ExternalLink size={14} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Pulsing Border Effect for Delayed Leads */}
-      {isDelayed && (
-        <div className="absolute inset-0 pointer-events-none border-2 border-rose-500/30 rounded-2xl animate-ping-slow" />
-      )}
-    </motion.div>
+        {/* Pulsing Border Effect for Delayed Leads */}
+        {isDelayed && (
+          <div className="absolute inset-0 pointer-events-none border-2 border-rose-500/30 rounded-2xl animate-ping-slow" />
+        )}
+      </motion.div>
+    </>
   );
 };

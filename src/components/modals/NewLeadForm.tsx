@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Upload, Loader2 } from 'lucide-react';
+import { X, Upload, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { supabase } from '../../lib/supabase';
 
 interface NewLeadFormProps {
   isOpen: boolean;
@@ -12,34 +13,64 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
   const [formData, setFormData] = useState({
     project_name: '',
     lead_name: '',
+    email: '',
     phone: '',
     budget: '',
     category: 'Proyecto' as 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado',
     main_image_url: null as File | null
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const checkEmailDuplicity = async (email: string) => {
+    const { data, error } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking duplicity:', error);
+      return false;
+    }
+    return !!data;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.project_name || !formData.budget || !formData.lead_name || !formData.phone) return;
+    setError(null);
+    if (!formData.project_name || !formData.budget || !formData.lead_name || !formData.phone || !formData.email) return;
 
     setIsSubmitting(true);
-    // Simulación de subida a Supabase Storage bucket 'renders'
-    if (formData.main_image_url) {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-    } else {
-      await new Promise(resolve => setTimeout(resolve, 500));
+
+    try {
+      const isDuplicate = await checkEmailDuplicity(formData.email);
+      if (isDuplicate) {
+        setError('Ya existe un lead registrado con este correo electrónico.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Simulación de subida a Supabase Storage bucket 'renders'
+      if (formData.main_image_url) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      onSubmit({
+        ...formData,
+        budget: Number(formData.budget),
+        main_image_url: formData.main_image_url ? URL.createObjectURL(formData.main_image_url) : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c'
+      });
+      
+      onClose();
+      setFormData({ project_name: '', lead_name: '', email: '', phone: '', budget: '', category: 'Proyecto', main_image_url: null });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    onSubmit({
-      ...formData,
-      budget: Number(formData.budget),
-      main_image_url: formData.main_image_url ? URL.createObjectURL(formData.main_image_url) : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c'
-    });
-    
-    setIsSubmitting(false);
-    onClose();
-    setFormData({ project_name: '', lead_name: '', phone: '', budget: '', category: 'Proyecto', main_image_url: null });
   };
 
   return (
@@ -68,8 +99,24 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              <AnimatePresence mode="wait">
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-start gap-3"
+                  >
+                    <AlertCircle className="text-rose-500 shrink-0 mt-0.5" size={16} />
+                    <p className="text-xs text-rose-200 leading-tight">{error}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Nombre del Proyecto</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  Nombre del Proyecto <span className="text-rose-500">*</span>
+                </label>
                 <input
                   required
                   type="text"
@@ -82,7 +129,9 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Nombre del Lead</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                    Nombre del Lead <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     required
                     type="text"
@@ -93,7 +142,25 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Teléfono</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                    Email <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    placeholder="juan@ejemplo.com"
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    value={formData.email}
+                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                    Teléfono <span className="text-rose-500">*</span>
+                  </label>
                   <input
                     required
                     type="tel"
@@ -103,22 +170,28 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
                   />
                 </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                    Presupuesto (USD) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">$</span>
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      className="w-full pl-8 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      value={formData.budget}
+                      onChange={e => setFormData({ ...formData, budget: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Presupuesto</label>
-                  <input
-                    required
-                    type="number"
-                    placeholder="15000"
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    value={formData.budget}
-                    onChange={e => setFormData({ ...formData, budget: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Categoría</label>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Categoría</label>
                   <select
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.category}
@@ -129,7 +202,6 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     <option value="10 ft Modificado">10 ft Modificado</option>
                   </select>
                 </div>
-              </div>
 
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Asset Inicial (Opcional)</label>

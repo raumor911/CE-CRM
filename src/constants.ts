@@ -10,6 +10,7 @@ export const MOCK_LEADS: Lead[] = [
     sentiment_label: "Entusiasta",
     main_image_url: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
     lead_name: "Carlos Ruiz",
+    email: "carlos.ruiz@example.com",
     phone: "+52 55 1234 5678",
     category: "Proyecto",
     is_priority: true
@@ -23,6 +24,7 @@ export const MOCK_LEADS: Lead[] = [
     sentiment_label: "Preocupado",
     main_image_url: "https://images.unsplash.com/photo-1497366216548-37526070297c",
     lead_name: "Ana García",
+    email: "ana.garcia@example.com",
     phone: "+52 55 8765 4321",
     category: "Proyecto",
     ai_notes: "El cliente está preocupado por los plazos de entrega de la carpintería.",
@@ -37,6 +39,7 @@ export const MOCK_LEADS: Lead[] = [
     sentiment_label: "Dudoso",
     main_image_url: "https://images.unsplash.com/photo-1484154218962-a197022b5858",
     lead_name: "Juan Pérez",
+    email: "juan.perez@email.com",
     phone: "+52 55 5555 5555",
     category: "10 ft Modificado",
     contact_info: "juan.perez@email.com"
@@ -50,6 +53,7 @@ export const MOCK_LEADS: Lead[] = [
     sentiment_label: "Entusiasta",
     main_image_url: "https://images.unsplash.com/photo-1518780664697-55e3ad937233",
     lead_name: "Sofía Martínez",
+    email: "sofia.martinez@example.com",
     phone: "+52 55 4444 4444",
     category: "Proyecto",
     checklist_briefing: { m2: true, style_defined: true, deadlines: false }
@@ -63,6 +67,7 @@ export const MOCK_LEADS: Lead[] = [
     sentiment_label: "Entusiasta",
     main_image_url: "https://images.unsplash.com/photo-1554995207-c18c203602cb",
     lead_name: "Roberto Gómez",
+    email: "roberto.gomez@example.com",
     phone: "+52 55 3333 3333",
     category: "Compra Contenedor"
   }

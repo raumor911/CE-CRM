@@ -1,13 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lead } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 export function useSupabaseLeads() {
+  const { user } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
+    if (!user) return;
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -23,13 +26,13 @@ export function useSupabaseLeads() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   const createLead = async (lead: Omit<Lead, 'id'>) => {
     try {
       const { data, error } = await supabase
         .from('leads')
-        .insert([lead])
+        .insert([{ ...lead, user_id: user?.id }])
         .select();
 
       if (error) throw error;
@@ -63,6 +66,12 @@ export function useSupabaseLeads() {
   };
 
   useEffect(() => {
+    if (!user) {
+      setLeads([]);
+      setLoading(false);
+      return;
+    }
+
     fetchLeads();
 
     // Suscribirse a cambios en tiempo real
@@ -82,7 +91,7 @@ export function useSupabaseLeads() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchLeads]);
+  }, [fetchLeads, user]);
 
   return { leads, loading, error, fetchLeads, createLead, updateLead };
 }

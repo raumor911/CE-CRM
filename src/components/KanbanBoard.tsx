@@ -6,9 +6,10 @@ import { STAGES } from '../constants';
 interface KanbanBoardProps {
   leads: Lead[];
   onUpdateLead: (id: string, updates: Partial<Lead>) => void;
+  onSelectLead: (lead: Lead) => void;
 }
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, onSelectLead }) => {
   return (
     <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
       {STAGES.map((stage) => (
@@ -26,7 +27,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead })
             {leads
               .filter((lead) => lead.stage === stage)
               .map((lead) => (
-                <LeadCard key={lead.id} lead={lead} onUpdateLead={onUpdateLead} />
+                <LeadCard 
+                  key={lead.id} 
+                  lead={lead} 
+                  onUpdateLead={onUpdateLead} 
+                  onSelectLead={onSelectLead}
+                />
               ))}
             
             {leads.filter(l => l.stage === stage).length === 0 && (

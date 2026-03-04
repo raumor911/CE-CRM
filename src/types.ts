@@ -9,6 +9,7 @@ export interface Lead {
   sentiment_label: Sentiment;
   main_image_url: string;
   lead_name: string;
+  email: string;
   phone: string;
   category: 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado';
   contact_info?: string;
@@ -26,4 +27,5 @@ export interface Lead {
   is_priority?: boolean;
   created_at?: string;
   assigned_to?: string;
+  user_id?: string;
 }
