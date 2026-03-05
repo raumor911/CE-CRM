@@ -32,9 +32,10 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
 
           {children}
 
-          <div className="mt-8 pt-6 border-t border-zinc-800 flex flex-col items-center gap-2">
+          <div className="mt-8 pt-6 border-t border-zinc-800 flex flex-col items-center gap-1">
             <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Creativos Espacios</p>
-            <p className="text-[9px] text-zinc-600">Sales Cockpit v1.1.0 • ISO 27001 Compliant</p>
+            <p className="text-indigo-500 font-black tracking-[0.2em] text-[11px] uppercase">Catalyst</p>
+            <p className="text-[9px] text-zinc-600 mt-2">Sales Cockpit v1.1.0 • ISO 27001 Compliant</p>
           </div>
         </div>
       </motion.div>

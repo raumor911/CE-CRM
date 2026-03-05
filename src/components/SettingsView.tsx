@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Settings, DollarSign, Clock, Bell, Shield, Save, CheckCircle2, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
+import { importLeadsFromCSV } from '../lib/importLeads';
 
 export const SettingsView: React.FC = () => {
   const [costPerHour, setCostPerHour] = useState(50);
@@ -193,6 +194,61 @@ export const SettingsView: React.FC = () => {
               <p className="text-[10px] text-zinc-500 italic">
                 * El password temporal para Andrea es: <code className="bg-zinc-800 px-1 rounded">Andrea_Creativos_2026_#</code>
               </p>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900/50 border border-zinc-800 p-8 rounded-2xl space-y-6">
+            <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
+              <Save className="text-indigo-500" size={24} />
+              <h3 className="text-lg font-bold text-white">Importación Masiva (Google Sheets)</h3>
+            </div>
+            <div className="space-y-4">
+              <p className="text-xs text-zinc-500">
+                Pega aquí los datos exportados de Google Sheets (formato CSV o valores separados por comas) para cargarlos al directorio.
+              </p>
+              <textarea
+                id="csv-import-area"
+                placeholder="Oportunidad_ID,Fecha_entrada,Nombre..."
+                className="w-full h-32 bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-xs font-mono text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={async () => {
+                    const textarea = document.getElementById('csv-import-area') as HTMLTextAreaElement;
+                    const csvData = textarea.value;
+                    if (!csvData) return alert('Por favor pega los datos primero.');
+                    
+                    const result = await importLeadsFromCSV(csvData, 'Ingreso');
+                    if (result.success) {
+                      alert(`¡Éxito! Se han importado ${result.count} leads en etapa de Ingreso.`);
+                      textarea.value = '';
+                    } else {
+                      alert('Error en la importación: ' + result.message);
+                    }
+                  }}
+                  className="py-3 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold rounded-xl transition-all border border-zinc-700"
+                >
+                  Cargar como Prospectos (Ingreso)
+                </button>
+                <button
+                  onClick={async () => {
+                    const textarea = document.getElementById('csv-import-area') as HTMLTextAreaElement;
+                    const csvData = textarea.value;
+                    if (!csvData) return alert('Por favor pega los datos primero.');
+                    
+                    const result = await importLeadsFromCSV(csvData, 'Cierre');
+                    if (result.success) {
+                      alert(`¡Éxito! Se han importado ${result.count} leads en etapa de Cierre (Agenda).`);
+                      textarea.value = '';
+                    } else {
+                      alert('Error en la importación: ' + result.message);
+                    }
+                  }}
+                  className="py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20"
+                >
+                  Cargar como Clientes (Cierre)
+                </button>
+              </div>
             </div>
           </div>
 

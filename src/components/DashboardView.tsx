@@ -14,18 +14,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
   const priorityLeads = activeLeads.filter(l => l.is_priority);
 
   const stats = [
-    { label: 'Leads Activos', value: activeLeads.length, icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-    { label: 'Valor en Pipeline', value: `$${(totalValue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Prioridad Alta', value: priorityLeads.length, icon: AlertCircle, color: 'text-rose-500', bg: 'bg-rose-500/10' },
-    { label: 'Tiempo Promedio', value: '4.2h', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { label: 'Leads Activos', value: activeLeads.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Valor en Pipeline', value: `$${(totalValue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Prioridad Alta', value: priorityLeads.length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Tiempo Promedio', value: '4.2h', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-8 p-6 bg-bg-main min-h-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">Dashboard Operativo</h1>
-          <p className="text-zinc-500 text-sm">Resumen de métricas y rendimiento del pipeline.</p>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">Dashboard Operativo</h1>
+          <p className="text-slate-500 text-sm font-medium">Resumen de métricas y rendimiento del pipeline.</p>
         </div>
       </div>
 
@@ -36,14 +36,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl flex items-center gap-4"
+            className="bg-white border border-slate-200 p-6 rounded-xl flex items-center gap-4 shadow-sm"
           >
-            <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
+            <div className={`${stat.bg} ${stat.color} p-3 rounded-lg`}>
               <stat.icon size={24} />
             </div>
             <div>
-              <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">{stat.label}</p>
-              <p className="text-2xl font-black text-white">{stat.value}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{stat.label}</p>
+              <p className="text-2xl font-black text-slate-900">{stat.value}</p>
             </div>
           </motion.div>
         ))}
@@ -53,21 +53,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
         <div className="lg:col-span-2">
           <CostOfWaitDashboard leads={leads} />
         </div>
-        <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl space-y-6">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="bg-white border border-slate-200 p-6 rounded-xl space-y-6 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <AlertCircle size={20} className="text-rose-500" />
             Leads en Riesgo
           </h3>
           <div className="space-y-4">
             {activeLeads.slice(0, 5).map(lead => (
-              <div key={lead.id} className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-xl border border-zinc-700/50">
+              <div key={lead.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold text-white">{lead.lead_name}</span>
-                  <span className="text-[10px] text-zinc-500">{lead.project_name}</span>
+                  <span className="text-sm font-bold text-slate-900">{lead.lead_name}</span>
+                  <span className="text-[10px] text-slate-500">{lead.project_name}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-bold text-rose-500">+$12.50</span>
-                  <p className="text-[10px] text-zinc-500">Cost of Wait</p>
+                  <span className="text-xs font-bold text-rose-600 font-mono">+$12.50</span>
+                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Cost of Wait</p>
                 </div>
               </div>
             ))}

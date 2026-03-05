@@ -97,7 +97,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex">
+    <div className="min-h-screen bg-bg-main text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex">
       <Sidebar 
         currentView={currentView} 
         onViewChange={setCurrentView}
@@ -110,10 +110,10 @@ export default function App() {
         isSidebarCollapsed ? "ml-20" : "ml-64"
       )}>
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-6 py-4">
+        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4">
           <div className="flex items-center justify-between max-w-[1600px] mx-auto">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-black tracking-tight uppercase">
+              <h1 className="text-xl font-black tracking-tight uppercase text-slate-900">
                 {currentView === 'pipeline' ? 'Pipeline Kanban' : 
                  currentView === 'dashboard' ? 'Dashboard' :
                  currentView === 'directory' ? 'Directorio' : 'Ajustes'}
@@ -121,7 +121,7 @@ export default function App() {
               {currentView === 'pipeline' && (
                 <button 
                   onClick={() => setIsModalOpen(true)}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
+                  className="bg-brand-primary hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
                 >
                   <Plus size={18} />
                   <span className="hidden sm:inline">Nuevo Lead</span>
@@ -130,12 +130,12 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-full transition-colors">
+              <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
                 <Search size={20} />
               </button>
-              <button className="p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-full transition-colors relative">
+              <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
                 <Bell size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-black"></span>
+                <span className="absolute top-2 right-2 w-2 h-2 bg-status-critical rounded-full border-2 border-white"></span>
               </button>
             </div>
           </div>

@@ -37,7 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside 
       className={cn(
-        "fixed left-0 top-0 h-full bg-zinc-950 border-r border-zinc-800 transition-all duration-300 z-50 flex flex-col",
+        "fixed left-0 top-0 h-full bg-brand-dark border-r border-slate-800 transition-all duration-300 z-50 flex flex-col",
         isCollapsed ? "w-20" : "w-64"
       )}
     >
@@ -45,15 +45,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-6 flex items-center justify-between">
         {!isCollapsed && (
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-black text-xl">C</span>
+            <div className="w-10 h-10 bg-brand-primary rounded-lg flex items-center justify-center shrink-0">
+              <span className="text-white font-black text-2xl">C</span>
             </div>
-            <span className="text-white font-bold tracking-tight">CE-CRM</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-white font-bold tracking-tight text-sm leading-tight truncate">Creativos Espacios</span>
+              <span className="text-indigo-400 font-black tracking-widest text-[10px] uppercase leading-none mt-0.5">Catalyst</span>
+            </div>
           </div>
         )}
         {isCollapsed && (
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center mx-auto">
-            <span className="text-white font-black text-lg">C</span>
+          <div className="w-10 h-10 bg-brand-primary rounded-lg flex items-center justify-center mx-auto">
+            <span className="text-white font-black text-xl">C</span>
           </div>
         )}
       </div>
@@ -65,10 +68,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             key={item.id}
             onClick={() => onViewChange(item.id)}
             className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative",
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative",
               currentView === item.id 
-                ? "bg-indigo-600 text-white" 
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                ? "bg-brand-primary text-white" 
+                : "text-slate-400 hover:bg-slate-800 hover:text-white"
             )}
           >
             <item.icon size={20} className={cn(
@@ -79,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-sm font-medium">{item.label}</span>
             )}
             {isCollapsed && (
-              <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+              <div className="absolute left-full ml-4 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                 {item.label}
               </div>
             )}
@@ -88,12 +91,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-zinc-800 space-y-4">
+      <div className="p-4 border-t border-slate-800 space-y-4">
         <div className={cn(
           "flex items-center gap-3 px-2",
           isCollapsed ? "justify-center" : ""
         )}>
-          <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 shrink-0">
+          <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-slate-400 shrink-0">
             <UserIcon size={16} />
           </div>
           {!isCollapsed && (
@@ -101,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-xs font-bold text-white truncate">
                 {user?.email?.split('@')[0]}
               </span>
-              <span className="text-[10px] text-zinc-500 truncate">
+              <span className="text-[10px] text-slate-500 truncate">
                 {user?.email}
               </span>
             </div>
@@ -111,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => signOut()}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-400 hover:bg-rose-950/30 hover:text-rose-500 transition-all group relative",
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-rose-950/30 hover:text-rose-500 transition-all group relative",
             isCollapsed ? "justify-center" : ""
           )}
         >
@@ -126,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex items-center justify-center py-2 text-zinc-500 hover:text-white transition-colors"
+          className="w-full flex items-center justify-center py-2 text-slate-500 hover:text-white transition-colors"
         >
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
