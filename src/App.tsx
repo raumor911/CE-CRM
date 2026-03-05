@@ -166,7 +166,12 @@ export default function App() {
                   />
                 )}
                 {currentView === 'dashboard' && <DashboardView leads={leads} />}
-                {currentView === 'directory' && <DirectoryView leads={leads} />}
+                {currentView === 'directory' && (
+                  <DirectoryView 
+                    leads={leads} 
+                    onUpdateLead={handleUpdateLead}
+                  />
+                )}
                 {currentView === 'settings' && <SettingsView />}
               </motion.div>
             </AnimatePresence>

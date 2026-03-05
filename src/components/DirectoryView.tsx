@@ -7,9 +7,10 @@ import { useEffect } from 'react';
 
 interface DirectoryViewProps {
   leads: Lead[];
+  onUpdateLead: (id: string, updates: Partial<Lead>) => void;
 }
 
-export const DirectoryView: React.FC<DirectoryViewProps> = ({ leads: initialLeads }) => {
+export const DirectoryView: React.FC<DirectoryViewProps> = ({ leads: initialLeads, onUpdateLead }) => {
   const { fetchArchivedLeads } = useSupabaseLeads();
   const [searchTerm, setSearchTerm] = useState('');
   const [showArchived, setShowArchived] = useState(false);
@@ -25,6 +26,17 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ leads: initialLead
       });
     }
   }, [showArchived, fetchArchivedLeads]);
+
+  const handleUnarchive = async (lead: Lead) => {
+    try {
+      await onUpdateLead(lead.id, { is_archived: false });
+      if (showArchived) {
+        setArchivedLeads(prev => prev.filter(l => l.id !== lead.id));
+      }
+    } catch (error) {
+      console.error('Error unarchiving lead:', error);
+    }
+  };
 
   const currentLeads = showArchived ? archivedLeads : initialLeads;
 
@@ -186,6 +198,16 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ leads: initialLead
                       <button className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors">
                         <ExternalLink size={16} />
                       </button>
+                      {showArchived && (
+                        <button 
+                          onClick={() => handleUnarchive(lead)}
+                          className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-1 text-[10px] font-bold px-2"
+                          title="Recuperar Lead"
+                        >
+                          <CheckCircle2 size={14} />
+                          Recuperar
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

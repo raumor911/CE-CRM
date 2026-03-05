@@ -275,23 +275,38 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 <span className="w-1 h-1 bg-zinc-300 rounded-full" />
                 <span className={cn(
                   "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg",
+                  lead.is_archived ? "bg-rose-500/10 text-rose-500" :
                   lead.stage === 'Ingreso' ? "bg-blue-500/10 text-blue-500" :
                   lead.stage === 'Briefing' ? "bg-amber-500/10 text-amber-500" :
                   lead.stage === 'Propuesta' ? "bg-indigo-500/10 text-indigo-500" :
                   lead.stage === 'Negociación' ? "bg-purple-500/10 text-purple-500" :
                   "bg-emerald-500/10 text-emerald-500"
                 )}>
-                  {lead.stage}
+                  {lead.is_archived ? `Archivado: ${lead.archive_reason}` : lead.stage}
                 </span>
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-500 hover:text-zinc-900 transition-all"
-          >
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-3">
+            {lead.is_archived && (
+              <button
+                onClick={() => {
+                  onUpdate(lead.id, { is_archived: false });
+                  onClose();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-500/20"
+              >
+                <CheckCircle2 size={16} />
+                Recuperar Lead
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-500 hover:text-zinc-900 transition-all"
+            >
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
