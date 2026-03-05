@@ -16,7 +16,9 @@ import {
   ExternalLink,
   Loader2,
   Trash2,
-  Download
+  Download,
+  Archive,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lead, LeadDocument, LeadActivity } from '../types';
@@ -47,6 +49,17 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [viewingFile, setViewingFile] = useState<(LeadDocument & { url: string }) | null>(null);
   const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [archiveReason, setArchiveReason] = useState('');
+  const [isArchiving, setIsArchiving] = useState(false);
+
+  const archiveReasons = [
+    { id: 'Ghosting', label: 'Ghosting (Dejó de responder)' },
+    { id: 'Price-Drop', label: 'Price-Drop (Presupuesto alto)' },
+    { id: 'Timing', label: 'Timing (Interés futuro)' },
+    { id: 'Lost', label: 'Lost (Se fue con la competencia)' },
+    { id: 'Other', label: 'Otro motivo' }
+  ];
 
   const fetchActivities = async () => {
     if (!lead.id) return;
@@ -192,6 +205,23 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     }
   };
 
+  const handleArchive = async () => {
+    if (!archiveReason) return;
+    setIsArchiving(true);
+    try {
+      await onUpdate(lead.id, {
+        is_archived: true,
+        archive_reason: archiveReason,
+        archived_at: new Date().toISOString()
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error archiving lead:', error);
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
   const tabs = [
     { id: 'timeline', label: 'Timeline', icon: History },
     { id: 'notes', label: 'Notas', icon: MessageSquare },
@@ -275,7 +305,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                     <DollarSign size={14} />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Presupuesto</span>
                   </div>
-                  <p className="text-xl font-black text-zinc-900">{formatCurrency(lead.budget || 0)}</p>
+                  <p className="text-xl font-black text-zinc-900">
+                    {lead.budget ? formatCurrency(lead.budget) : 'Por definir'}
+                  </p>
                 </div>
                 <div className="p-4 bg-white border border-zinc-100 rounded-2xl space-y-1 shadow-sm">
                   <div className="flex items-center gap-2 text-rose-600">
@@ -291,10 +323,12 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Información de Contacto</h3>
               <div className="space-y-3">
-                <div className="flex items-center gap-3 text-zinc-600">
-                  <Mail size={16} />
-                  <span className="text-sm truncate">{lead.email}</span>
-                </div>
+                {lead.email && (
+                  <div className="flex items-center gap-3 text-zinc-600">
+                    <Mail size={16} />
+                    <span className="text-sm truncate">{lead.email}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-3 text-zinc-600">
                   <Phone size={16} />
                   <span className="text-sm">{lead.phone}</span>
@@ -310,13 +344,21 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </div>
             </div>
 
-            <div className="pt-4 border-t border-zinc-100">
+            <div className="pt-4 border-t border-zinc-100 space-y-3">
               <button 
                 onClick={() => setIsActivityModalOpen(true)}
                 className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-zinc-900/10 flex items-center justify-center gap-2"
               >
                 <Plus size={18} />
                 <span>Nueva Actividad</span>
+              </button>
+              
+              <button 
+                onClick={() => setIsArchiveModalOpen(true)}
+                className="w-full bg-white border border-zinc-200 hover:bg-rose-50 hover:border-rose-200 text-zinc-500 hover:text-rose-600 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <Archive size={18} />
+                <span>Archivar Lead</span>
               </button>
             </div>
           </div>
@@ -565,6 +607,69 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
               <span className="text-sm font-bold text-zinc-900 uppercase tracking-widest">Generando Acceso Seguro...</span>
             </div>
+          </motion.div>
+        )}
+
+        {isArchiveModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[500] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-zinc-100"
+            >
+              <div className="p-6 border-b border-zinc-50 bg-zinc-50 flex items-center justify-between">
+                <div className="flex items-center gap-3 text-rose-600">
+                  <Archive size={20} />
+                  <h3 className="font-black uppercase tracking-tight">Archivar Lead</h3>
+                </div>
+                <button onClick={() => setIsArchiveModalOpen(false)} className="text-zinc-400 hover:text-zinc-900">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex gap-3">
+                  <AlertTriangle className="text-rose-500 shrink-0" size={20} />
+                  <p className="text-xs text-rose-700 leading-relaxed">
+                    Al archivar este lead, desaparecerá de tu tablero Kanban. Podrás recuperarlo o consultarlo más tarde desde el archivo estratégico.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Motivo del Archivo (Obligatorio)</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {archiveReasons.map((reason) => (
+                      <button
+                        key={reason.id}
+                        onClick={() => setArchiveReason(reason.id)}
+                        className={cn(
+                          "w-full p-4 rounded-2xl text-left text-sm font-bold transition-all border",
+                          archiveReason === reason.id 
+                            ? "bg-zinc-900 border-zinc-900 text-white shadow-lg shadow-zinc-900/20" 
+                            : "bg-white border-zinc-100 text-zinc-600 hover:border-zinc-300"
+                        )}
+                      >
+                        {reason.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleArchive}
+                  disabled={!archiveReason || isArchiving}
+                  className="w-full py-4 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:hover:bg-rose-600 text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-rose-600/20 flex items-center justify-center gap-2"
+                >
+                  {isArchiving ? <Loader2 className="animate-spin" size={20} /> : <Archive size={20} />}
+                  <span>Confirmar Archivo</span>
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

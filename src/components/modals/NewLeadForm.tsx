@@ -39,16 +39,18 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!formData.project_name || !formData.budget || !formData.lead_name || !formData.phone || !formData.email) return;
+    if (!formData.project_name || !formData.lead_name || !formData.phone) return;
 
     setIsSubmitting(true);
 
     try {
-      const isDuplicate = await checkEmailDuplicity(formData.email);
-      if (isDuplicate) {
-        setError('Ya existe un lead registrado con este correo electrónico.');
-        setIsSubmitting(false);
-        return;
+      if (formData.email) {
+        const isDuplicate = await checkEmailDuplicity(formData.email);
+        if (isDuplicate) {
+          setError('Ya existe un lead registrado con este correo electrónico.');
+          setIsSubmitting(false);
+          return;
+        }
       }
 
       // Simulación de subida a Supabase Storage bucket 'renders'
@@ -60,7 +62,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
       
       onSubmit({
         ...formData,
-        budget: Number(formData.budget),
+        budget: formData.budget ? Number(formData.budget) : undefined,
         main_image_url: formData.main_image_url ? URL.createObjectURL(formData.main_image_url) : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c'
       });
       
@@ -143,10 +145,9 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                      Email <span className="text-rose-500">*</span>
+                      Email
                     </label>
                     <input
-                      required
                       type="email"
                       placeholder="juan@ejemplo.com"
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
@@ -172,12 +173,11 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                      Presupuesto (MXN) <span className="text-rose-500">*</span>
+                      Presupuesto (MXN)
                     </label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">$</span>
                       <input
-                        required
                         type="number"
                         min="0"
                         step="0.01"

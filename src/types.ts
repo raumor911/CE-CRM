@@ -4,12 +4,12 @@ export interface Lead {
   id: string; // UUID
   project_name: string;
   stage: 'Ingreso' | 'Briefing' | 'Propuesta' | 'Negociación' | 'Cierre';
-  budget: number;
+  budget?: number;
   last_activity: string;
   sentiment_label: Sentiment;
   main_image_url: string;
   lead_name: string;
-  email: string;
+  email?: string;
   phone: string;
   category: 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado';
   contact_info?: string;
@@ -25,6 +25,9 @@ export interface Lead {
   ai_notes?: string;
   price_history?: { date: string; amount: number }[];
   is_priority?: boolean;
+  is_archived?: boolean;
+  archive_reason?: string;
+  archived_at?: string;
   created_at?: string;
   assigned_to?: string;
   user_id?: string;

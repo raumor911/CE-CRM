@@ -16,6 +16,7 @@ export function useSupabaseLeads() {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
+        .eq('is_archived', false)
         .order('last_activity', { ascending: false });
 
       if (error) throw error;
@@ -70,6 +71,23 @@ export function useSupabaseLeads() {
     }
   };
 
+  const fetchArchivedLeads = useCallback(async () => {
+    if (!user) return [];
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('is_archived', true)
+        .order('archived_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (err: any) {
+      console.error('Error fetching archived leads:', err);
+      return [];
+    }
+  }, [user]);
+
   useEffect(() => {
     if (!user) {
       setLeads([]);
@@ -92,7 +110,11 @@ export function useSupabaseLeads() {
           });
         } else if (payload.eventType === 'UPDATE') {
           const updatedLead = payload.new as Lead;
-          setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+          if (updatedLead.is_archived) {
+            setLeads(prev => prev.filter(l => l.id !== updatedLead.id));
+          } else {
+            setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+          }
         } else if (payload.eventType === 'DELETE') {
           setLeads(prev => prev.filter(l => l.id !== payload.old.id));
         }
@@ -104,5 +126,5 @@ export function useSupabaseLeads() {
     };
   }, [fetchLeads, user]);
 
-  return { leads, loading, error, fetchLeads, createLead, updateLead };
+  return { leads, loading, error, fetchLeads, createLead, updateLead, fetchArchivedLeads };
 }

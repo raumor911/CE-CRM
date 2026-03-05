@@ -228,7 +228,9 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
             </h3>
             <div className="flex items-center gap-1.5 text-slate-500 mt-1">
               <DollarSign size={12} className="text-slate-400" />
-              <span className="text-xs font-medium">{formatCurrency(lead.budget)}</span>
+              <span className="text-xs font-medium">
+                {lead.budget ? formatCurrency(lead.budget) : 'Por definir'}
+              </span>
             </div>
           </div>
           <span className={cn(
