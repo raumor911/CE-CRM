@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Clock, DollarSign, MessageSquare, ExternalLink, CheckCircle2, History, CreditCard, Send, User, Loader2, Sparkles } from 'lucide-react';
+import { Clock, DollarSign, MessageSquare, ExternalLink, CheckCircle2, History, CreditCard, Send, User, Loader2, Sparkles, Phone, Mail } from 'lucide-react';
 import { Lead } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 import { differenceInHours, parseISO } from 'date-fns';
 import { useLeadAutomation } from '../hooks/useLeadAutomation';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 interface LeadCardProps {
   lead: Lead;
@@ -13,6 +15,7 @@ interface LeadCardProps {
 }
 
 export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelectLead }) => {
+  const { user } = useAuth();
   const { copyProposalLink, scheduleBriefing, formatWhatsAppMessage } = useLeadAutomation();
   const hoursSinceActivity = differenceInHours(new Date(), parseISO(lead.last_activity));
   const isDelayed = hoursSinceActivity > 24;
@@ -41,10 +44,30 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
     alert(`Link copiado al portapapeles:\n\n${template}`);
   };
 
-  const handleWhatsApp = () => {
+  const handleWhatsApp = async () => {
     const url = formatWhatsAppMessage(lead);
     const count = (lead.whatsapp_interaction_count || 0) + 1;
-    onUpdateLead(lead.id, { whatsapp_interaction_count: count });
+    
+    // 1. Update lead interaction count and last activity
+    onUpdateLead(lead.id, { 
+      whatsapp_interaction_count: count,
+      last_activity: new Date().toISOString()
+    });
+
+    // 2. Register activity in Supabase
+    if (user) {
+      try {
+        await supabase.from('lead_activities').insert([{
+          lead_id: lead.id,
+          type: 'WhatsApp',
+          description: `Contacto iniciado vía WhatsApp (Interacción #${count})`,
+          user_id: user.id
+        }]);
+      } catch (error) {
+        console.error("Error registering WhatsApp activity:", error);
+      }
+    }
+
     window.open(url, '_blank');
   };
 
@@ -233,38 +256,36 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
             {getActionButtonLabel()}
           </button>
           
-          <div className="flex gap-2">
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowTimeline(!showTimeline);
-              }}
-              className="flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors flex items-center justify-center"
-            >
-              <MessageSquare size={16} />
-            </button>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleWhatsApp();
-              }}
-              className="flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50 text-emerald-600 transition-colors flex items-center justify-center relative"
-            >
-              <div className="relative">
-                <MessageSquare size={16} />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              {/* CONSERVAMOS SOLO WHATSAPP - RAUVIA Product Lead Strategy */}
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleWhatsApp();
+                }}
+                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors group relative"
+                title="Contactar por WhatsApp"
+              >
+                <MessageSquare size={18} className="group-hover:scale-110 transition-transform" />
                 {lead.whatsapp_interaction_count && lead.whatsapp_interaction_count > 0 && (
-                  <span className="absolute -top-2.5 -right-2.5 bg-emerald-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+                  <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center border border-white">
                     {lead.whatsapp_interaction_count}
                   </span>
                 )}
-              </div>
-            </button>
+              </button>
+
+              {/* OCULTAMOS LOS DEMÁS (Phone/Mail) para reducir carga cognitiva */}
+            </div>
+
+            {/* Botón de expansión/detalle */}
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                handleShare();
+                onSelectLead(lead);
               }}
-              className="flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors flex items-center justify-center"
+              className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"
+              title="Ver detalles"
             >
               <ExternalLink size={16} />
             </button>

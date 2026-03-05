@@ -9,7 +9,6 @@ import {
   FileText, 
   History,
   CheckCircle2,
-  AlertCircle,
   Plus,
   Send,
   Mail,
@@ -26,6 +25,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useEffect } from 'react';
 import { ActivityModal } from './modals/ActivityModal';
+import { CatalystMediaViewer } from './CatalystMediaViewer';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -45,6 +45,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [viewingFile, setViewingFile] = useState<(LeadDocument & { url: string }) | null>(null);
+  const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
 
   const fetchActivities = async () => {
     if (!lead.id) return;
@@ -157,6 +159,24 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     }
   };
 
+  const handleViewFile = async (doc: LeadDocument) => {
+    setIsGeneratingUrl(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from('client-documents')
+        .createSignedUrl(doc.file_path, 300, { download: false });
+      
+      if (error) throw error;
+      if (data?.signedUrl) {
+        setViewingFile({ ...doc, url: data.signedUrl });
+      }
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+    } finally {
+      setIsGeneratingUrl(false);
+    }
+  };
+
   const handleDownload = async (doc: LeadDocument) => {
     try {
       const { data, error } = await supabase.storage
@@ -174,13 +194,24 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
 
   const tabs = [
     { id: 'timeline', label: 'Timeline', icon: History },
-    { id: 'notes', label: 'Notas IA', icon: MessageSquare },
+    { id: 'notes', label: 'Notas', icon: MessageSquare },
     { id: 'documents', label: 'Documentos', icon: FileText },
   ] as const;
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
-    const updatedNotes = lead.ai_notes ? `${lead.ai_notes}\n\n[${new Date().toLocaleDateString()}] ${newNote}` : `[${new Date().toLocaleDateString()}] ${newNote}`;
+    const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario';
+    const timestamp = new Date().toLocaleString('es-MX', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    const noteEntry = `[${timestamp} - ${userName}]: ${newNote}`;
+    const updatedNotes = lead.ai_notes ? `${lead.ai_notes}\n\n${noteEntry}` : noteEntry;
+    
     await onUpdate(lead.id, { ai_notes: updatedNotes });
     setNewNote('');
   };
@@ -378,33 +409,28 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                     exit={{ opacity: 0, x: -20 }}
                     className="space-y-6"
                   >
-                    <div className="bg-zinc-50 border border-zinc-100 p-6 rounded-2xl space-y-4">
-                      <div className="flex items-center gap-2 text-zinc-900">
-                        <AlertCircle size={18} className="text-indigo-600" />
-                        <h4 className="text-sm font-bold uppercase tracking-wider">Sugerencias de la IA</h4>
-                      </div>
-                      <p className="text-sm text-zinc-600 leading-relaxed italic">
-                        "El cliente muestra un sentimiento entusiasta pero tiene dudas sobre los plazos de entrega. Se recomienda enviar el catálogo de proyectos terminados para generar confianza."
-                      </p>
-                    </div>
-
                     <div className="space-y-4">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Notas del Comercial</h4>
-                      <div className="bg-zinc-50 border border-zinc-100 p-4 rounded-2xl text-sm text-zinc-600 whitespace-pre-wrap min-h-[150px]">
+                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                        Historial de Notas del Proyecto
+                      </h4>
+                      {/* Bloque de historial: Ahora en blanco/gris claro */}
+                      <div className="bg-zinc-50 border border-zinc-200 p-4 rounded-2xl text-sm text-zinc-700 whitespace-pre-wrap min-h-[250px] max-h-[400px] overflow-y-auto shadow-sm custom-scrollbar">
                         {lead.ai_notes || 'No hay notas registradas para este lead.'}
                       </div>
                     </div>
 
                     <div className="relative">
+                      {/* Textarea: Ahora blanco puro con texto oscuro */}
                       <textarea
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
-                        placeholder="Escribe una nota interna..."
-                        className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl p-4 pr-12 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[100px] resize-none"
+                        placeholder="Escribe un comentario o actualización importante..."
+                        className="w-full bg-white border border-zinc-200 rounded-2xl p-4 pr-12 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all min-h-[120px] resize-none shadow-sm"
                       />
                       <button 
                         onClick={handleAddNote}
-                        className="absolute right-4 bottom-4 p-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 transition-all"
+                        disabled={!newNote.trim()}
+                        className="absolute right-4 bottom-4 p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none"
                       >
                         <Send size={18} />
                       </button>
@@ -428,19 +454,23 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                         </div>
                       ) : documents.length > 0 ? (
                         documents.map((doc) => (
-                          <div key={doc.id} className="p-4 bg-white border border-zinc-100 rounded-2xl flex items-center justify-between group hover:border-zinc-200 transition-all shadow-sm">
+                          <div 
+                            key={doc.id} 
+                            onClick={() => handleViewFile(doc)}
+                            className="p-4 bg-white border border-zinc-100 rounded-2xl flex items-center justify-between group hover:border-indigo-500/30 hover:bg-indigo-50/10 transition-all shadow-sm cursor-pointer"
+                          >
                             <div className="flex items-center gap-3 overflow-hidden">
-                              <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 group-hover:text-zinc-900 transition-colors shrink-0">
+                              <div className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 group-hover:text-indigo-600 transition-colors shrink-0">
                                 <FileText size={20} />
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-bold text-zinc-900 truncate">{doc.file_name}</p>
+                                <p className="text-sm font-bold text-zinc-900 truncate group-hover:text-indigo-900 transition-colors">{doc.file_name}</p>
                                 <p className="text-[10px] text-zinc-500">
                                   {(doc.file_size / 1024 / 1024).toFixed(2)} MB • {new Date(doc.created_at).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                               <button 
                                 onClick={() => handleDownload(doc)}
                                 className="p-2 text-zinc-400 hover:text-zinc-900 transition-colors"
@@ -517,6 +547,25 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               onUpdate(lead.id, { last_activity: new Date().toISOString() });
             }}
           />
+        )}
+        {viewingFile && (
+          <CatalystMediaViewer 
+            file={viewingFile} 
+            onClose={() => setViewingFile(null)} 
+          />
+        )}
+        {isGeneratingUrl && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[400] bg-black/20 backdrop-blur-[2px] flex items-center justify-center"
+          >
+            <div className="bg-white p-6 rounded-2xl shadow-2xl flex items-center gap-4 border border-zinc-100">
+              <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+              <span className="text-sm font-bold text-zinc-900 uppercase tracking-widest">Generando Acceso Seguro...</span>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
