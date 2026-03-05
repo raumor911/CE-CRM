@@ -23,8 +23,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
       >
         <div className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-3xl p-8 shadow-2xl">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-500/20 mb-4">
-              <LayoutDashboard size={28} />
+            <div className="mb-6">
+              <img 
+                src="https://ais-pre-7lln6mowgsjchyh7kug26e-157929339977.us-east1.run.app/Catalyst_Logo.png" 
+                alt="Catalyst Logo" 
+                className="h-16 w-auto object-contain"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">{title}</h1>
             <p className="text-zinc-400 text-sm mt-1">{subtitle}</p>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lead } from '../types';
 import { Search, Filter, MoreVertical, ExternalLink, Mail, Phone } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatCurrency } from '../lib/utils';
 
 interface DirectoryViewProps {
   leads: Lead[];
@@ -75,7 +75,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ leads }) => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm font-bold text-slate-900 font-mono">
-                      ${lead.budget?.toLocaleString()}
+                      {formatCurrency(lead.budget || 0)}
                     </span>
                   </td>
                   <td className="px-6 py-4">

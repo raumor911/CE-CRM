@@ -36,9 +36,14 @@ export function useSupabaseLeads() {
         .select();
 
       if (error) throw error;
-      if (data) {
-        setLeads(prev => [data[0], ...prev]);
+      
+      if (data && data[0]) {
+        setLeads(prev => {
+          const exists = prev.some(l => l.id === data[0].id);
+          return exists ? prev : [data[0], ...prev];
+        });
       }
+      
       return data?.[0];
     } catch (err: any) {
       setError(err.message);
@@ -79,9 +84,15 @@ export function useSupabaseLeads() {
       .channel('leads_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setLeads(prev => [payload.new as Lead, ...prev]);
+          const newLead = payload.new as Lead;
+          setLeads(prev => {
+            const exists = prev.some(l => l.id === newLead.id);
+            if (exists) return prev;
+            return [newLead, ...prev];
+          });
         } else if (payload.eventType === 'UPDATE') {
-          setLeads(prev => prev.map(l => l.id === payload.new.id ? payload.new as Lead : l));
+          const updatedLead = payload.new as Lead;
+          setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
         } else if (payload.eventType === 'DELETE') {
           setLeads(prev => prev.filter(l => l.id !== payload.old.id));
         }

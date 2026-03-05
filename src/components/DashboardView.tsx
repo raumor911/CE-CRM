@@ -1,6 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, Users, TrendingUp, Clock, AlertCircle } from 'lucide-react';
 import { Lead } from '../types';
+import { formatCurrency } from '../lib/utils';
 import { CostOfWaitDashboard } from './CostOfWaitDashboard';
 import { motion } from 'motion/react';
 
@@ -15,7 +16,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
 
   const stats = [
     { label: 'Leads Activos', value: activeLeads.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Valor en Pipeline', value: `$${(totalValue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Valor en Pipeline', value: formatCurrency(totalValue), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Prioridad Alta', value: priorityLeads.length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
     { label: 'Tiempo Promedio', value: '4.2h', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];

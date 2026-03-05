@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Clock, DollarSign, MessageSquare, ExternalLink, CheckCircle2, History, CreditCard, Send, User, Loader2, Sparkles } from 'lucide-react';
 import { Lead } from '../types';
-import { cn } from '../lib/utils';
+import { cn, formatCurrency } from '../lib/utils';
 import { differenceInHours, parseISO } from 'date-fns';
 import { useLeadAutomation } from '../hooks/useLeadAutomation';
 
@@ -192,7 +192,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
             getCostOfWaitStyles(costOfWait)
           )}>
             {costOfWait > 50 && <span className="animate-pulse">⌛</span>}
-            <span>${costOfWait.toFixed(0)}</span>
+            <span>{formatCurrency(costOfWait)}</span>
           </div>
         )}
       </div>
@@ -205,7 +205,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
             </h3>
             <div className="flex items-center gap-1.5 text-slate-500 mt-1">
               <DollarSign size={12} className="text-slate-400" />
-              <span className="text-xs font-medium">${lead.budget.toLocaleString()}</span>
+              <span className="text-xs font-medium">{formatCurrency(lead.budget)}</span>
             </div>
           </div>
           <span className={cn(

@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertCircle, TrendingDown } from 'lucide-react';
 import { Lead } from '../types';
 import { differenceInHours, parseISO } from 'date-fns';
+import { formatCurrency } from '../lib/utils';
 
 interface CostOfWaitDashboardProps {
   leads: Lead[];
@@ -39,7 +40,7 @@ export const CostOfWaitDashboard: React.FC<CostOfWaitDashboardProps> = ({ leads 
         </div>
         <div>
           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Pipeline Total</p>
-          <p className="text-2xl font-bold text-white dark:text-zinc-900">${leads.reduce((acc, l) => acc + l.budget, 0).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-white dark:text-zinc-900">{formatCurrency(leads.reduce((acc, l) => acc + l.budget, 0))}</p>
         </div>
       </div>
     </div>

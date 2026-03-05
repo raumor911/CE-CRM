@@ -75,7 +75,7 @@ export const SettingsView: React.FC = () => {
             
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Valor por Hora de Inactividad (USD)</label>
+                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Valor por Hora de Inactividad (MXN)</label>
                 <div className="relative">
                   <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
                   <input
