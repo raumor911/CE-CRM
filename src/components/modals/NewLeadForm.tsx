@@ -53,17 +53,13 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
         }
       }
 
-      // Simulación de subida a Supabase Storage bucket 'renders'
-      if (formData.main_image_url) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+      // Simulación de guardado
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       onSubmit({
         ...formData,
-        budget: formData.budget ? Number(formData.budget) : undefined,
-        main_image_url: formData.main_image_url ? URL.createObjectURL(formData.main_image_url) : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c'
+        budget: formData.budget || 0,
+        main_image_url: '' // Forzamos cadena vacía desde el origen
       });
       
       onClose();
@@ -203,6 +199,8 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     </select>
                   </div>
 
+                {/* Oculto temporalmente para simplificar el MVP */}
+                {/* 
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Asset Inicial (Opcional)</label>
                   <div className="relative group">
@@ -222,6 +220,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     </div>
                   </div>
                 </div>
+                */}
 
                 <button
                   disabled={isSubmitting}

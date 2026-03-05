@@ -36,30 +36,44 @@ export default function App() {
 
   const handleCreateLead = async (data: any) => {
     try {
+      // 1. CONSTRUCCIÓN LIMPIA DEL OBJETO
+      // Convertimos explícitamente el presupuesto a número y eliminamos la imagen
       const newLeadData: Omit<Lead, 'id'> = {
         project_name: data.project_name,
         lead_name: data.lead_name,
         email: data.email,
         phone: data.phone,
-        budget: data.budget,
+        budget: Number(data.budget) || 0, // Aseguramos que sea número
         category: data.category,
         stage: 'Ingreso',
         last_activity: new Date().toISOString(),
         sentiment_label: 'Dudoso',
-        main_image_url: data.main_image_url,
+        main_image_url: '', // Enviamos cadena vacía para evitar errores de tipo
         checklist_briefing: { m2: false, style_defined: false, deadlines: false }
       };
 
+      // 2. INSERCIÓN EN SUPABASE
       const createdLead = await supabaseCreateLead(newLeadData);
       
       if (createdLead) {
-        const sentiment = await analyzeSentiment("Nuevo lead capturado desde el formulario");
-        await supabaseUpdateLead(createdLead.id, { sentiment_label: sentiment });
+        // 3. ANÁLISIS DE SENTIMIENTO (Opcional)
+        try {
+          const sentiment = await analyzeSentiment("Nuevo lead capturado");
+          await supabaseUpdateLead(createdLead.id, { sentiment_label: sentiment });
+        } catch (e) {
+          console.warn("Fallo análisis de IA, pero el lead se creó.");
+        }
+
         showToast("Lead creado exitosamente", "success");
-        setIsModalOpen(false);
+        setIsModalOpen(false); // Cerrar modal
       }
-    } catch (error) {
-      showToast("Error al crear el lead", "error");
+    } catch (error: any) {
+      console.error("Error crítico al crear lead:", error);
+      // Si el error es 23505, es por correo duplicado
+      const message = error.code === '23505'
+        ? "Este correo electrónico ya está registrado"
+        : "Error de conexión con la base de datos";
+      showToast(message, "error");
     }
   };
 

@@ -43,22 +43,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
     >
       {/* Header */}
-      <div className="p-6 flex items-center justify-between">
+      <div className={cn(
+        "flex items-center justify-center transition-all duration-300",
+        isCollapsed ? "p-4" : "p-6"
+      )}>
         <div className={cn(
-          "flex items-center gap-3",
-          isCollapsed ? "mx-auto" : "px-2"
+          "bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center transition-all duration-300",
+          isCollapsed ? "w-12 h-12 p-1" : "w-full p-4"
         )}>
-          <BrandConfig.Logo className="w-10 h-10 shrink-0" />
-          {!isCollapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="font-black text-2xl tracking-tighter text-slate-900 leading-none">
-                {BrandConfig.AppName.toUpperCase()}
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate mt-0.5">
-                {BrandConfig.CompanyName}
-              </span>
-            </div>
-          )}
+          <BrandConfig.Logo className="w-full h-full" />
         </div>
       </div>
 
