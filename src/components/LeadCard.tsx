@@ -1,5 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { MessageSquare, ExternalLink } from 'lucide-react';
 import { Lead } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
@@ -21,6 +23,22 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
   const isDelayed = hoursSinceActivity > 24;
   const costOfWait = hoursSinceActivity * 50;
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: lead.id });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 100 : 1,
+  };
+
   const getCostOfWaitStyles = (cost: number) => {
     if (cost < 10) return "text-slate-500 bg-slate-100";
     if (cost <= 50) return "bg-amber-100 text-amber-700 border border-amber-200";
@@ -31,13 +49,11 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
     const url = formatWhatsAppMessage(lead);
     const count = (lead.whatsapp_interaction_count || 0) + 1;
     
-    // 1. Update lead interaction count and last activity
     onUpdateLead(lead.id, { 
       whatsapp_interaction_count: count,
       last_activity: new Date().toISOString()
     });
 
-    // 2. Register activity in Supabase
     if (user) {
       try {
         await supabase.from('lead_activities').insert([{
@@ -56,13 +72,18 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
 
   return (
     <motion.div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2, scale: 1.01 }}
       onClick={() => onSelectLead(lead)}
       className={cn(
-        "bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden group",
+        "bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative overflow-hidden group",
+        isDragging && "shadow-xl ring-2 ring-indigo-500/20",
         isDelayed && costOfWait > 50 ? "border-red-500 ring-1 ring-red-500/10" : "border-slate-200"
       )}
     >

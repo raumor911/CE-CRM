@@ -228,6 +228,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     { id: 'documents', label: 'Documentos', icon: FileText },
   ] as const;
 
+  const SENTIMENTS: Lead['sentiment_label'][] = ['Entusiasta', 'Dudoso', 'Preocupado'];
+
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
     const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario';
@@ -352,10 +354,31 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                   <Calendar size={16} />
                   <span className="text-sm">Creado: {new Date(lead.created_at || '').toLocaleDateString()}</span>
                 </div>
-                <div className="flex items-center gap-3 text-zinc-600">
-                  <TrendingUp size={16} />
-                  <span className="text-sm">Sentimiento: {lead.sentiment_label}</span>
-                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Estado y Sentimiento</h3>
+              <div className="flex flex-col gap-2">
+                {SENTIMENTS.map((s) => (
+                  <button 
+                    key={s} 
+                    onClick={() => onUpdate(lead.id, { sentiment_label: s })} 
+                    className={cn( 
+                      "w-full px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-between group", 
+                      lead.sentiment_label === s 
+                        ? s === 'Entusiasta' ? "bg-emerald-50 border-emerald-200 text-emerald-700" : 
+                          s === 'Dudoso' ? "bg-amber-50 border-amber-200 text-amber-700" : 
+                          "bg-rose-50 border-rose-200 text-rose-700" 
+                        : "bg-white border-zinc-100 text-zinc-400 hover:border-zinc-300 hover:text-zinc-600" 
+                    )} 
+                  > 
+                    <span>{s}</span> 
+                    {lead.sentiment_label === s && ( 
+                      <CheckCircle2 size={14} className="animate-in zoom-in duration-300" /> 
+                    )} 
+                  </button> 
+                ))} 
               </div>
             </div>
 
