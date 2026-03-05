@@ -43,24 +43,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-start gap-3"
+            className="bg-rose-50 border border-rose-100 rounded-xl p-3 flex items-start gap-3"
           >
             <AlertCircle className="text-rose-500 shrink-0 mt-0.5" size={16} />
-            <p className="text-xs text-rose-200 leading-tight">{error}</p>
+            <p className="text-xs text-rose-700 leading-tight">{error}</p>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="space-y-1.5">
-        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider ml-1">Correo Corporativo</label>
+        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Correo Corporativo</label>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-zinc-800/50 border border-zinc-700 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-zinc-600"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-300"
             placeholder="usuario@creativosespacios.com"
           />
         </div>
@@ -68,17 +68,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
 
       <div className="space-y-1.5">
         <div className="flex justify-between items-center px-1">
-          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Contraseña</label>
-          <button type="button" className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors">¿Olvidaste tu contraseña?</button>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contraseña</label>
+          <button type="button" className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors">¿Olvidaste tu contraseña?</button>
         </div>
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-zinc-800/50 border border-zinc-700 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all placeholder:text-zinc-600"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-300"
             placeholder="••••••••"
           />
         </div>
