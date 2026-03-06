@@ -41,7 +41,8 @@ export default function App() {
       const newLeadData: Omit<Lead, 'id'> = {
         project_name: data.project_name,
         lead_name: data.lead_name,
-        email: data.email,
+        // REGLA DE ORO: Si el email viene vacío, enviamos null para PostgreSQL
+        email: data.email?.trim() === "" ? null : data.email,
         phone: data.phone,
         budget: Number(data.budget) || 0, // Aseguramos que sea número
         category: data.category,
