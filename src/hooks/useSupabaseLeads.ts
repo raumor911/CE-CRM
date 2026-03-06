@@ -61,8 +61,24 @@ export function useSupabaseLeads() {
         .select();
 
       if (error) throw error;
-      if (data) {
-        setLeads(prev => prev.map(l => l.id === id ? data[0] : l));
+      
+      if (data && data[0]) {
+        const updated = data[0];
+        setLeads(prev => {
+          const isNowActive = !updated.is_archived;
+          const wasAlreadyActive = prev.some(l => l.id === id);
+
+          if (isNowActive && !wasAlreadyActive) {
+            // El lead vuelve a la vida: se inserta en la lista y 
+            // el Kanban lo filtra por su 'stage' original. 
+            return [updated, ...prev];
+          } else if (!isNowActive) {
+            // El lead se va al archivo 
+            return prev.filter(l => l.id !== id);
+          }
+          // Actualización normal de datos 
+          return prev.map(l => l.id === id ? updated : l);
+        });
       }
       return data?.[0];
     } catch (err: any) {
@@ -113,7 +129,14 @@ export function useSupabaseLeads() {
           if (updatedLead.is_archived) {
             setLeads(prev => prev.filter(l => l.id !== updatedLead.id));
           } else {
-            setLeads(prev => prev.map(l => l.id === updatedLead.id ? updatedLead : l));
+            setLeads(prev => {
+              const exists = prev.some(l => l.id === updatedLead.id);
+              if (exists) {
+                return prev.map(l => l.id === updatedLead.id ? updatedLead : l);
+              }
+              // Recuperación: inyectar en la lista activa
+              return [updatedLead, ...prev];
+            });
           }
         } else if (payload.eventType === 'DELETE') {
           setLeads(prev => prev.filter(l => l.id !== payload.old.id));
