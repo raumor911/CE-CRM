@@ -35,7 +35,7 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
     zIndex: isDragging ? 100 : 1,
   };
 
@@ -78,15 +78,26 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
       {...listeners}
       layout
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ 
+        opacity: 1, 
+        y: 0,
+        rotate: isDragging ? 3 : 0,
+        scale: isDragging ? 1.05 : 1
+      }}
       whileHover={{ y: -2, scale: 1.01 }}
       onClick={() => onSelectLead(lead)}
       className={cn(
-        "bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative overflow-hidden group",
-        isDragging && "shadow-xl ring-2 ring-indigo-500/20",
+        "bg-white rounded-xl border border-slate-200 shadow-sm transition-all cursor-grab active:cursor-grabbing relative overflow-hidden group",
+        isDragging ? "shadow-2xl ring-2 ring-amber-500/30 brightness-110" : "hover:shadow-md",
         isDelayed && costOfWait > 50 ? "border-red-500 ring-1 ring-red-500/10" : "border-slate-200"
       )}
     >
+      {/* Badge de Etapa Destino (Solo durante arrastre) */}
+      {isDragging && (
+        <div className="absolute top-2 right-2 z-30 bg-amber-500 text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg animate-pulse uppercase tracking-tighter">
+          Moviendo...
+        </div>
+      )}
       {/* Priority Indicator */}
       {lead.is_priority && (
         <div className="absolute -left-10 top-3 rotate-[-45deg] bg-amber-400 text-amber-950 text-[9px] font-black py-1 px-10 z-20 shadow-sm uppercase tracking-wider">

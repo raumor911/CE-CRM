@@ -23,6 +23,8 @@ interface KanbanBoardProps {
   onSelectLead: (lead: Lead) => void;
 }
 
+const VALID_STAGES = ['Ingreso', 'Briefing', 'Propuesta', 'Negociación', 'Cierre'];
+
 const KanbanColumn: React.FC<{
   id: string;
   title: string;
@@ -30,7 +32,7 @@ const KanbanColumn: React.FC<{
   onUpdateLead: (id: string, updates: Partial<Lead>) => void;
   onSelectLead: (lead: Lead) => void;
 }> = ({ id, title, leads, onUpdateLead, onSelectLead }) => {
-  const { setNodeRef } = useDroppable({ id });
+  const { setNodeRef, isOver } = useDroppable({ id });
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -44,9 +46,9 @@ const KanbanColumn: React.FC<{
   };
 
   return (
-    <div ref={setNodeRef} className="flex-shrink-0 w-80">
+    <div ref={setNodeRef} className="flex-shrink-0 w-80 flex flex-col min-h-[500px]">
       <div className="flex items-center justify-between mb-4 px-2">
-        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+        <h3 className="font-black uppercase text-xs text-zinc-400 flex items-center gap-2">
           <span className={cn("w-2 h-2 rounded-full", getStageColor(title))}></span>
           {title}
           <span className="bg-white border border-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded-full shadow-sm">
@@ -55,19 +57,26 @@ const KanbanColumn: React.FC<{
         </h3>
       </div>
       
-      <div className="space-y-3 min-h-[calc(100vh-200px)] rounded-xl bg-slate-100/50 p-3 border border-slate-200/60">
+      <div className={cn(
+        "flex-1 space-y-3 rounded-xl p-3 border transition-all duration-200",
+        isOver 
+          ? "bg-amber-500/5 border-2 border-dashed border-amber-500/50 shadow-inner scale-[1.01]" 
+          : "bg-slate-100/50 border-slate-200/60"
+      )}>
         <SortableContext items={leads.map(l => l.id)} strategy={verticalListSortingStrategy}>
-          {leads.map((lead) => (
-            <LeadCard 
-              key={lead.id} 
-              lead={lead} 
-              onUpdateLead={onUpdateLead} 
-              onSelectLead={onSelectLead}
-            />
-          ))}
+          <div className="flex flex-col gap-3 min-h-[200px]">
+            {leads.map((lead) => (
+              <LeadCard 
+                key={lead.id} 
+                lead={lead} 
+                onUpdateLead={onUpdateLead} 
+                onSelectLead={onSelectLead}
+              />
+            ))}
+          </div>
         </SortableContext>
         
-        {leads.length === 0 && (
+        {leads.length === 0 && !isOver && (
           <div className="py-12 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 text-xs text-center px-4 gap-2">
             <p>Tu pipeline está despejado.</p>
             <p className="text-[10px] opacity-70 italic">Es buen momento para prospectar.</p>
@@ -91,12 +100,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     const { active, over } = event;
     if (!over) return;
 
-    const leadId = active.id as string;
-    const newStage = over.id as Lead['stage'];
+    const activeId = active.id as string;
+    const overId = over.id as string;
 
-    const lead = leads.find(l => l.id === leadId);
-    if (lead && lead.stage !== newStage) {
-      onUpdateLead(leadId, { stage: newStage });
+    // Determinar la etapa de destino
+    let newStage: string | undefined;
+
+    if (VALID_STAGES.includes(overId)) {
+      // Si caemos sobre una columna (el id es la etapa)
+      newStage = overId;
+    } else {
+      // Si caemos sobre otra tarjeta, buscamos a qué etapa pertenece esa tarjeta
+      const targetLead = leads.find(l => l.id === overId);
+      newStage = targetLead?.stage;
+    }
+
+    // VALIDACIÓN: Solo actualizar si es una etapa válida y distinta a la actual
+    if (newStage && VALID_STAGES.includes(newStage)) {
+      const lead = leads.find(l => l.id === activeId);
+      if (lead && lead.stage !== newStage) {
+        onUpdateLead(activeId, { stage: newStage as Lead['stage'] });
+      }
     }
   };
 
