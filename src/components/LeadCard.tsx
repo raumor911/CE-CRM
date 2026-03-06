@@ -14,9 +14,10 @@ interface LeadCardProps {
   lead: Lead;
   onUpdateLead: (id: string, updates: Partial<Lead>) => void;
   onSelectLead: (lead: Lead) => void;
+  isOverlay?: boolean;
 }
 
-export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelectLead }) => {
+export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelectLead, isOverlay }) => {
   const { user } = useAuth();
   const { formatWhatsAppMessage } = useLeadAutomation();
   const hoursSinceActivity = differenceInHours(new Date(), parseISO(lead.last_activity));
@@ -30,13 +31,13 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
     transform,
     transition,
     isDragging
-  } = useSortable({ id: lead.id });
+  } = useSortable({ id: lead.id, disabled: isOverlay });
 
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
-    opacity: isDragging ? 0.3 : 1,
-    zIndex: isDragging ? 100 : 1,
+    opacity: isOverlay ? 0.9 : (isDragging ? 0.3 : 1),
+    zIndex: isOverlay ? 1000 : (isDragging ? 100 : 1),
   };
 
   const getCostOfWaitStyles = (cost: number) => {
@@ -81,20 +82,21 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
       animate={{ 
         opacity: 1, 
         y: 0,
-        rotate: isDragging ? 3 : 0,
-        scale: isDragging ? 1.05 : 1
+        rotate: isOverlay ? 3 : 0,
+        scale: isOverlay ? 1.05 : 1
       }}
-      whileHover={{ y: -2, scale: 1.01 }}
-      onClick={() => onSelectLead(lead)}
+      whileHover={{ y: isOverlay ? 0 : -2, scale: isOverlay ? 1.05 : 1.01 }}
+      onClick={() => !isOverlay && onSelectLead(lead)}
       className={cn(
-        "bg-white rounded-xl border border-slate-200 shadow-sm transition-all cursor-grab active:cursor-grabbing relative overflow-hidden group",
-        isDragging ? "shadow-2xl ring-2 ring-amber-500/30 brightness-110" : "hover:shadow-md",
+        "bg-white rounded-xl border border-slate-200 shadow-sm transition-all relative overflow-hidden group",
+        isOverlay ? "shadow-2xl ring-2 ring-indigo-500/30 cursor-grabbing" : "cursor-grab hover:shadow-md",
+        isDragging && !isOverlay && "brightness-95",
         isDelayed && costOfWait > 50 ? "border-red-500 ring-1 ring-red-500/10" : "border-slate-200"
       )}
     >
-      {/* Badge de Etapa Destino (Solo durante arrastre) */}
-      {isDragging && (
-        <div className="absolute top-2 right-2 z-30 bg-amber-500 text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg animate-pulse uppercase tracking-tighter">
+      {/* Badge de Etapa Destino (Solo en Overlay) */}
+      {isOverlay && (
+        <div className="absolute top-2 right-2 z-30 bg-indigo-600 text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg animate-pulse uppercase tracking-tighter">
           Moviendo...
         </div>
       )}

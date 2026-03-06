@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   DndContext, 
-  DragEndEvent, 
+  DragEndEvent,
+  DragStartEvent,
   PointerSensor, 
   useSensor, 
   useSensors, 
-  closestCorners 
+  closestCorners,
+  DragOverlay
 } from '@dnd-kit/core';
 import { 
   SortableContext, 
@@ -51,16 +53,19 @@ const KanbanColumn: React.FC<{
         <h3 className="font-black uppercase text-xs text-zinc-400 flex items-center gap-2">
           <span className={cn("w-2 h-2 rounded-full", getStageColor(title))}></span>
           {title}
-          <span className="bg-white border border-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded-full shadow-sm">
+          <span className={cn(
+            "bg-white border border-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded-full shadow-sm transition-all duration-300",
+            isOver && "animate-pulse ring-2 ring-indigo-400 border-indigo-400 text-indigo-600 scale-110"
+          )}>
             {leads.length}
           </span>
         </h3>
       </div>
       
       <div className={cn(
-        "flex-1 space-y-3 rounded-xl p-3 border transition-all duration-200",
+        "flex-1 space-y-3 rounded-xl p-3 border transition-all duration-300",
         isOver 
-          ? "bg-amber-500/5 border-2 border-dashed border-amber-500/50 shadow-inner scale-[1.01]" 
+          ? "bg-indigo-50/50 border-2 border-dashed border-indigo-400 shadow-inner scale-[1.02]" 
           : "bg-slate-100/50 border-slate-200/60"
       )}>
         <SortableContext items={leads.map(l => l.id)} strategy={verticalListSortingStrategy}>
@@ -88,6 +93,8 @@ const KanbanColumn: React.FC<{
 };
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, onSelectLead }) => {
+  const [activeLead, setActiveLead] = useState<Lead | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -96,8 +103,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     })
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const lead = leads.find(l => l.id === active.id);
+    if (lead) setActiveLead(lead);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveLead(null);
+    
     if (!over) return;
 
     const activeId = active.id as string;
@@ -128,6 +143,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     <DndContext 
       sensors={sensors} 
       collisionDetection={closestCorners} 
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide px-6 py-4">
@@ -142,6 +158,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
           />
         ))}
       </div>
+
+      <DragOverlay dropAnimation={null}>
+        {activeLead ? (
+          <LeadCard 
+            lead={activeLead} 
+            onUpdateLead={() => {}} 
+            onSelectLead={() => {}} 
+            isOverlay
+          />
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 };
