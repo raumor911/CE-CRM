@@ -382,6 +382,88 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </div>
             </div>
 
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Checklist de Briefing</h3>
+              <div className="space-y-2">
+                {[
+                  { id: 'm2', label: 'Metros cuadrados definidos' },
+                  { id: 'style_defined', label: 'Estilo arquitectónico' },
+                  { id: 'deadlines', label: 'Fechas de entrega pactadas' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      const currentChecklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false };
+                      onUpdate(lead.id, {
+                        checklist_briefing: {
+                          ...currentChecklist,
+                          [item.id]: !currentChecklist[item.id as keyof typeof currentChecklist]
+                        }
+                      });
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-3",
+                      lead.checklist_briefing?.[item.id as keyof typeof lead.checklist_briefing]
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                        : "bg-white border-zinc-100 text-zinc-400 hover:border-zinc-300"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-4 h-4 rounded border flex items-center justify-center transition-all",
+                      lead.checklist_briefing?.[item.id as keyof typeof lead.checklist_briefing]
+                        ? "bg-indigo-600 border-transparent text-white"
+                        : "border-zinc-300 bg-white"
+                    )}>
+                      {lead.checklist_briefing?.[item.id as keyof typeof lead.checklist_briefing] && <CheckCircle2 size={12} />}
+                    </div>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Checklist de Briefing</h3>
+              <div className="space-y-2 bg-white border border-zinc-100 rounded-2xl p-4 shadow-sm">
+                {[
+                  { id: 'm2', label: 'Metraje (M2) definido' },
+                  { id: 'style_defined', label: 'Estilo arquitectónico' },
+                  { id: 'deadlines', label: 'Fechas de entrega' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      const currentChecklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false };
+                      onUpdate(lead.id, {
+                        checklist_briefing: {
+                          ...currentChecklist,
+                          [item.id]: !currentChecklist[item.id as keyof typeof currentChecklist]
+                        }
+                      });
+                    }}
+                    className="w-full flex items-center justify-between group py-1"
+                  >
+                    <span className={cn(
+                      "text-xs font-medium transition-colors",
+                      lead.checklist_briefing?.[item.id as keyof NonNullable<Lead['checklist_briefing']>]
+                        ? "text-zinc-900"
+                        : "text-zinc-400 group-hover:text-zinc-600"
+                    )}>
+                      {item.label}
+                    </span>
+                    <div className={cn(
+                      "w-5 h-5 rounded-lg border flex items-center justify-center transition-all",
+                      lead.checklist_briefing?.[item.id as keyof NonNullable<Lead['checklist_briefing']>]
+                        ? "bg-indigo-600 border-indigo-600 text-white"
+                        : "bg-white border-zinc-200 group-hover:border-zinc-300"
+                    )}>
+                      {lead.checklist_briefing?.[item.id as keyof NonNullable<Lead['checklist_briefing']>] && <CheckCircle2 size={12} />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="pt-4 border-t border-zinc-100 space-y-3">
               <button 
                 onClick={() => setIsActivityModalOpen(true)}

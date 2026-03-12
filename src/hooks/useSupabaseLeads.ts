@@ -54,13 +54,17 @@ export function useSupabaseLeads() {
 
   const updateLead = async (id: string, updates: Partial<Lead>) => {
     try {
+      console.log('Actualizando lead:', id, updates);
       const { data, error } = await supabase
         .from('leads')
         .update(updates)
         .eq('id', id)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error de Supabase al actualizar:', error);
+        throw error;
+      }
       
       if (data && data[0]) {
         const updated = data[0];

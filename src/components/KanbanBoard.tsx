@@ -134,6 +134,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     if (newStage && VALID_STAGES.includes(newStage)) {
       const lead = leads.find(l => l.id === activeId);
       if (lead && lead.stage !== newStage) {
+        // VALIDACIÓN ADICIONAL PARA CIERRE (Shield Logic)
+        if (newStage === 'Cierre') {
+          const isChecklistComplete = 
+            lead.checklist_briefing?.m2 && 
+            lead.checklist_briefing?.style_defined && 
+            lead.checklist_briefing?.deadlines;
+          
+          if (!lead.email || !isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) {
+            const missing = [];
+            if (!lead.email) missing.push("Correo electrónico");
+            if (!isChecklistComplete) missing.push("Checklist de Briefing completo");
+            if (lead.sentiment_label !== 'Entusiasta') missing.push("Sentimiento 'Entusiasta'");
+            if ((lead.budget || 0) <= 0) missing.push("Presupuesto mayor a 0");
+
+            alert(`No se puede mover a 'Cierre' aún. Faltan estos requisitos de la regla 'Vantage Shield':\n\n- ${missing.join('\n- ')}`);
+            return;
+          }
+        }
         onUpdateLead(activeId, { stage: newStage as Lead['stage'] });
       }
     }

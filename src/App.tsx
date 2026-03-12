@@ -82,8 +82,11 @@ export default function App() {
     try {
       await supabaseUpdateLead(id, { ...updates, last_activity: new Date().toISOString() });
       showToast("Lead actualizado", "success");
-    } catch (error) {
-      showToast("Error al actualizar el lead", "error");
+    } catch (error: any) {
+      console.error("Error al actualizar lead:", error);
+      // Extraer el mensaje de error de Supabase si existe
+      const errorMessage = error.details || error.message || "Error al actualizar el lead";
+      showToast(errorMessage, "error");
     }
   };
 
