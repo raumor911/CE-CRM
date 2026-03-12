@@ -31,9 +31,9 @@ export interface Lead {
   created_at?: string;
   assigned_to?: string;
   user_id?: string;
-  payment_confirmed?: boolean;      // Nuevo: Switch de confirmación
-  monto_anticipo_real?: number;     // Nuevo: Monto del depósito
-  contract_signed_at?: string;      // Nuevo: Timestamp del servidor
+  payment_confirmed?: boolean;      // TRUE cuando se confirma el adelanto
+  monto_anticipo_real?: number;     // Monto real depositado
+  signed_at?: string;               // Timestamp de la firma/cierre
 }
 
 export interface LeadDocument {

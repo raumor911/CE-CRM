@@ -249,34 +249,63 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     setNewNote('');
   };
 
-  const handleConfirmDeposit = async () => { 
-    console.log("Iniciando proceso de depósito para:", lead.id); // <-- Debug 
-    
-    const amountStr = window.prompt( 
-      "Introduce el monto del adelanto de depósito (MXN):", 
-      lead.budget?.toString() || "0" 
-    ); 
-    
-    if (amountStr === null) return; // El usuario canceló el prompt 
+  const handleConfirmDeposit = async (e: React.MouseEvent) => { 
+    e.preventDefault(); 
+    e.stopPropagation(); 
   
-    const amount = parseFloat(amountStr); 
+    // Validación de negocio: No adelanto sin presupuesto 
+    if (!lead.budget || lead.budget <= 0) { 
+      alert("⚠️ Primero debes definir un presupuesto mayor a $0."); 
+      return; 
+    } 
   
-    if (isNaN(amount) || amount <= 0) { 
-      alert("Por favor, introduce un monto válido mayor a 0."); 
+    const suggestedAmount = (lead.budget * 0.5).toString(); 
+    const val = window.prompt("Monto del Adelanto de Depósito (MXN):", suggestedAmount); 
+    
+    if (val === null) return; 
+    const numVal = parseFloat(val.replace(/[^0-9.]/g, '')); 
+  
+    if (isNaN(numVal) || numVal <= 0) { 
+      alert("Ingresa un monto de adelanto válido."); 
       return; 
     } 
   
     try { 
-      // Sincronización completa con Vantage 
+      console.log("Wiring: Registrando adelanto y cerrando...", numVal); 
+      // APUNTANDO A LAS COLUMNAS EXACTAS 
       await onUpdate(lead.id, { 
         payment_confirmed: true, 
-        monto_anticipo_real: amount, 
-        contract_signed_at: new Date().toISOString(), 
-        stage: 'Cierre' // Movimiento automático al confirmar dinero 
+        monto_anticipo_real: numVal, 
+        signed_at: new Date().toISOString(), // Sello de tiempo 
+        stage: 'Cierre', // Movimiento automático 
+        last_activity: new Date().toISOString()
       }); 
-      console.log("Depósito registrado con éxito"); 
+      console.log("Hito financiero registrado y sellado con timestamp en signed_at");
     } catch (error) { 
-      console.error("Error al registrar el depósito:", error); 
+      console.error("Error en la transacción financiera:", error); 
+    } 
+  }; 
+
+  const handleUpdateBudget = async (e: React.MouseEvent) => { 
+    e.preventDefault(); 
+    e.stopPropagation(); // Detiene cualquier interferencia del modal 
+  
+    const currentBudget = lead.budget?.toString() || "0"; 
+    const val = window.prompt("Actualizar Presupuesto Total (MXN):", currentBudget); 
+    
+    if (val === null) return; 
+    const numVal = parseFloat(val.replace(/[^0-9.]/g, '')); 
+  
+    if (isNaN(numVal)) { 
+      alert("Por favor, ingresa un número válido."); 
+      return; 
+    } 
+  
+    try { 
+      console.log("Wiring: Actualizando presupuesto...", numVal); 
+      await onUpdate(lead.id, { budget: numVal }); 
+    } catch (err) { 
+      console.error("Error en conexión:", err); 
     } 
   }; 
 
@@ -345,30 +374,81 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
 
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
           {/* Left Panel: Info & Stats */}
-          <div className="w-full md:w-80 border-r border-zinc-100 p-6 space-y-8 overflow-y-auto bg-zinc-50/50">
-            <div className="space-y-4">
-              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Métricas Clave</h3>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="p-4 bg-white border border-zinc-100 rounded-2xl space-y-1 shadow-sm">
-                  <div className="flex items-center gap-2 text-emerald-600">
-                    <DollarSign size={14} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Presupuesto</span>
-                  </div>
-                  <p className="text-xl font-black text-zinc-900">
-                    {lead.budget ? formatCurrency(lead.budget) : 'Por definir'}
-                  </p>
-                </div>
-                <div className="p-4 bg-white border border-zinc-100 rounded-2xl space-y-1 shadow-sm">
-                  <div className="flex items-center gap-2 text-rose-600">
-                    <Clock size={14} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Cost of Wait</span>
-                  </div>
-                  <p className="text-xl font-black text-zinc-900">+$42.50</p>
-                  <p className="text-[10px] text-zinc-500">Acumulado en etapa actual</p>
-                </div>
-              </div>
+          <div className="w-full md:w-80 border-r border-zinc-100 p-6 space-y-8 overflow-y-auto bg-zinc-50/50 scrollbar-hide">
+            
+            {/* SECCIÓN GESTIÓN FINANCIERA */} 
+            <div className="space-y-4 pt-4 border-t border-zinc-100"> 
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Control de Venta</h3> 
+              
+              <div className="grid grid-cols-1 gap-3"> 
+                {/* Tarjeta de Presupuesto Editable - DESACTIVADO TEMPORALMENTE
+                <div 
+                  onClick={handleUpdateBudget} 
+                  className="p-4 bg-white border border-zinc-100 hover:border-emerald-200 rounded-2xl space-y-1 shadow-sm cursor-pointer transition-all group" 
+                > 
+                  <div className="flex items-center justify-between"> 
+                    <div className="flex items-center gap-2 text-emerald-600"> 
+                      <TrendingUp size={14} /> 
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Presupuesto</span> 
+                    </div> 
+                    <Plus size={14} className="text-zinc-300 group-hover:text-emerald-500 transition-colors" /> 
+                  </div> 
+                  <p className="text-xl font-black text-zinc-900"> 
+                    {lead.budget ? formatCurrency(lead.budget) : 'Definir Presupuesto'} 
+                  </p> 
+                </div> 
+                */}
+
+                {/* Botón de Adelanto / Estado de Pago - DESACTIVADO TEMPORALMENTE
+                {!lead.payment_confirmed ? ( 
+                  <button 
+                    type="button" 
+                    onClick={handleConfirmDeposit} 
+                    className={cn( 
+                      "w-full py-4 rounded-2xl font-bold flex flex-col items-center justify-center gap-1 transition-all shadow-lg group", 
+                      (lead.budget || 0) > 0 
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20" 
+                        : "bg-zinc-100 text-zinc-400 cursor-not-allowed" 
+                    )} 
+                  > 
+                    <div className="flex items-center gap-2"> 
+                      <DollarSign size={18} className="group-hover:scale-110 transition-transform" /> 
+                      <span>Confirmar Adelanto</span> 
+                    </div> 
+                    <span className="text-[9px] opacity-70 uppercase tracking-tighter"> 
+                      {(lead.budget || 0) > 0 ? "Click para registrar pago" : "Falta presupuesto"} 
+                    </span> 
+                  </button> 
+                ) : ( 
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2"> 
+                    <div className="flex items-center justify-between"> 
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase font-black">Venta Cerrada</span> 
+                      <CheckCircle2 size={16} className="text-emerald-500" /> 
+                    </div> 
+                    <div className="space-y-0.5"> 
+                      <p className="text-[10px] text-emerald-600/70 font-bold uppercase">Adelanto recibido</p> 
+                      <p className="text-xl font-black text-emerald-900"> 
+                        {formatCurrency(lead.monto_anticipo_real || 0)} 
+                      </p> 
+                    </div> 
+                    {lead.signed_at && ( 
+                      <div className="pt-2 border-t border-emerald-100 flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5 text-[8px] text-emerald-600/70 font-bold uppercase">
+                          <Clock size={10} /> 
+                          <span>Fecha de Cierre (Sello ISO)</span>
+                        </div>
+                        <p className="text-[10px] font-mono text-emerald-800 break-all bg-emerald-100/50 p-1.5 rounded-lg">
+                          {lead.signed_at}
+                        </p>
+                      </div> 
+                    )} 
+                  </div> 
+                )} 
+                */}
+              </div> 
             </div>
 
+            {/* INFORMACIÓN DE CONTACTO */}
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Información de Contacto</h3>
               <div className="space-y-3">
@@ -389,13 +469,18 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </div>
             </div>
 
+            {/* 2. ESTADO Y SENTIMIENTO (Botones Blindados) */}
             <div className="space-y-4">
-              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Estado y Sentimiento</h3>
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Sentimiento</h3>
               <div className="flex flex-col gap-2">
                 {SENTIMENTS.map((s) => (
                   <button 
                     key={s} 
-                    onClick={() => onUpdate(lead.id, { sentiment_label: s })} 
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUpdate(lead.id, { sentiment_label: s });
+                    }}
                     className={cn( 
                       "w-full px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-between group", 
                       lead.sentiment_label === s 
@@ -406,14 +491,13 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                     )} 
                   > 
                     <span>{s}</span> 
-                    {lead.sentiment_label === s && ( 
-                      <CheckCircle2 size={14} className="animate-in zoom-in duration-300" /> 
-                    )} 
+                    {lead.sentiment_label === s && <CheckCircle2 size={14} />} 
                   </button> 
                 ))} 
               </div>
             </div>
 
+            {/* 3. CHECKLIST DE BRIEFING (Botones Blindados) */}
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Checklist de Briefing</h3>
               <div className="space-y-2 bg-white border border-zinc-100 rounded-2xl p-4 shadow-sm">
@@ -424,22 +508,19 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 ].map((item) => (
                   <button
                     key={item.id}
+                    type="button"
                     disabled={!!isUpdatingChecklist}
-                    onClick={async () => {
-                      setIsUpdatingChecklist(item.id);
-                      try {
-                        const currentChecklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false };
-                        await onUpdate(lead.id, {
-                          checklist_briefing: {
-                            ...currentChecklist,
-                            [item.id]: !currentChecklist[item.id as keyof typeof currentChecklist]
-                          }
-                        });
-                      } finally {
-                        setIsUpdatingChecklist(null);
-                      }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const currentChecklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false };
+                      onUpdate(lead.id, {
+                        checklist_briefing: {
+                          ...currentChecklist,
+                          [item.id]: !currentChecklist[item.id as keyof typeof currentChecklist]
+                        }
+                      });
                     }}
-                    className="w-full flex items-center justify-between group py-1 disabled:opacity-50"
+                    className="w-full flex items-center justify-between group py-1.5 disabled:opacity-50"
                   >
                     <span className={cn(
                       "text-xs font-medium transition-colors",
@@ -455,66 +536,33 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                         ? "bg-indigo-600 border-indigo-600 text-white"
                         : "bg-white border-zinc-200 group-hover:border-zinc-300"
                     )}>
-                      {isUpdatingChecklist === item.id ? (
-                        <Loader2 size={10} className="animate-spin" />
-                      ) : (
-                        lead.checklist_briefing?.[item.id as keyof NonNullable<Lead['checklist_briefing']>] && <CheckCircle2 size={12} />
-                      )}
+                      {lead.checklist_briefing?.[item.id as keyof NonNullable<Lead['checklist_briefing']>] && <CheckCircle2 size={12} />}
                     </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="space-y-4 pt-4 border-t border-zinc-100"> 
-              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Validación de Cierre</h3> 
-              
-              {!lead.payment_confirmed ? ( 
-                <button 
-                  type="button" // Forzamos tipo button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); // Evitamos que el modal se cierre o haga otra cosa 
-                    handleConfirmDeposit(); 
-                  }} 
-                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-1 transition-all shadow-lg shadow-emerald-600/20 group" 
-                > 
-                  <div className="flex items-center gap-2"> 
-                    <DollarSign size={18} className="group-hover:scale-110 transition-transform" /> 
-                    <span>Adelanto de Depósito</span> 
-                  </div> 
-                  <span className="text-[9px] opacity-70 uppercase tracking-tighter">Registrar pago para sincronizar</span> 
-                </button> 
-              ) : ( 
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2"> 
-                  <div className="flex items-center justify-between"> 
-                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Pago Confirmado</span> 
-                    <CheckCircle2 size={16} className="text-emerald-500" /> 
-                  </div> 
-                  <p className="text-xl font-black text-emerald-900"> 
-                    ${lead.monto_anticipo_real?.toLocaleString()} 
-                  </p> 
-                  {lead.contract_signed_at && ( 
-                    <div className="pt-2 border-t border-emerald-100 flex items-center gap-2 text-[9px] text-emerald-600/60 font-bold uppercase"> 
-                      <Clock size={10} /> 
-                      <span>Sello: {new Date(lead.contract_signed_at).toLocaleString()}</span> 
-                    </div> 
-                  )} 
-                </div> 
-              )} 
-            </div>
-
+            {/* 5. ACCIONES FINALES (Botones Blindados) */}
             <div className="pt-4 border-t border-zinc-100 space-y-3">
-
               <button 
-                onClick={() => setIsActivityModalOpen(true)}
-                className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-zinc-900/10 flex items-center justify-center gap-2"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsActivityModalOpen(true);
+                }}
+                className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 <Plus size={18} />
                 <span>Nueva Actividad</span>
               </button>
               
               <button 
-                onClick={() => setIsArchiveModalOpen(true)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsArchiveModalOpen(true);
+                }}
                 className="w-full bg-white border border-zinc-200 hover:bg-rose-50 hover:border-rose-200 text-zinc-500 hover:text-rose-600 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
               >
                 <Archive size={18} />

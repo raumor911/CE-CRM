@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { MessageSquare, ExternalLink } from 'lucide-react';
+import { MessageSquare, ExternalLink, TrendingUp, DollarSign } from 'lucide-react';
 import { Lead } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 import { differenceInHours, parseISO } from 'date-fns';
@@ -44,6 +44,49 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
     if (cost < 10) return "text-slate-500 bg-slate-100";
     if (cost <= 50) return "bg-amber-100 text-amber-700 border border-amber-200";
     return "bg-red-600 text-white shadow-lg shadow-red-500/20";
+  };
+
+  const handleMainAction = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (lead.stage === 'Propuesta') {
+      const budget = prompt("Define el presupuesto final para este proyecto:", lead.budget?.toString() || "0");
+      if (budget !== null) {
+        const numBudget = parseFloat(budget.replace(/[^0-9.]/g, ''));
+        if (!isNaN(numBudget)) {
+          onUpdateLead(lead.id, { budget: numBudget, stage: 'Negociación' });
+        }
+      }
+    } 
+    else if (lead.stage === 'Cierre' && !lead.payment_confirmed) {
+      const amountStr = window.prompt(
+        "Introduce el monto del adelanto de depósito (MXN):",
+        lead.budget?.toString() || "0"
+      );
+      
+      if (amountStr === null) return;
+      const amount = parseFloat(amountStr.replace(/[^0-9.]/g, ''));
+
+      if (isNaN(amount) || amount <= 0) {
+        alert("Por favor, introduce un monto válido mayor a 0.");
+        return;
+      }
+
+      // REGLA DE NEGOCIO: Sincronización de columnas financieras
+      const updates: Partial<Lead> = {
+        payment_confirmed: true,
+        monto_anticipo_real: amount,
+        signed_at: new Date().toISOString(),
+        last_activity: new Date().toISOString()
+      };
+
+      try {
+        onUpdateLead(lead.id, updates);
+        console.log("Hito financiero registrado y sellado con timestamp en signed_at");
+      } catch (error) {
+        console.error("Error en la transacción financiera:", error);
+      }
+    }
   };
 
   const handleWhatsApp = async () => {
@@ -133,6 +176,32 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
             {lead.sentiment_label}
           </span>
         </div>
+
+        {/* Main Action Button (Propuesta / Cierre) - DESACTIVADO TEMPORALMENTE
+        {((lead.stage === 'Propuesta') || (lead.stage === 'Cierre' && !lead.payment_confirmed)) && (
+          <button
+            onClick={handleMainAction}
+            className={cn(
+              "w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+              lead.stage === 'Propuesta' 
+                ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
+                : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20"
+            )}
+          >
+            {lead.stage === 'Propuesta' ? (
+              <>
+                <TrendingUp size={12} />
+                <span>Definir Presupuesto</span>
+              </>
+            ) : (
+              <>
+                <DollarSign size={12} />
+                <span>Confirmar Adelanto</span>
+              </>
+            )}
+          </button>
+        )}
+        */}
 
         {/* Sección de acciones (conservamos WhatsApp y Detalle) */}
         <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
