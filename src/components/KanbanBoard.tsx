@@ -144,7 +144,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
           if (!lead.email || !isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) {
             const missing = [];
             if (!lead.email) missing.push("Correo electrónico");
-            if (!isChecklistComplete) missing.push("Checklist de Briefing completo");
+            if (!isChecklistComplete) missing.push("Checklist de Briefing completo (3/3 puntos marcados)");
             if (lead.sentiment_label !== 'Entusiasta') missing.push("Sentimiento 'Entusiasta'");
             if ((lead.budget || 0) <= 0) missing.push("Presupuesto mayor a 0");
 

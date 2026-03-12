@@ -52,6 +52,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState('');
   const [isArchiving, setIsArchiving] = useState(false);
+  const [isUpdatingChecklist, setIsUpdatingChecklist] = useState<string | null>(null);
 
   const archiveReasons = [
     { id: 'Ghosting', label: 'Ghosting (Dejó de responder)' },
@@ -432,16 +433,22 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 ].map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      const currentChecklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false };
-                      onUpdate(lead.id, {
-                        checklist_briefing: {
-                          ...currentChecklist,
-                          [item.id]: !currentChecklist[item.id as keyof typeof currentChecklist]
-                        }
-                      });
+                    disabled={!!isUpdatingChecklist}
+                    onClick={async () => {
+                      setIsUpdatingChecklist(item.id);
+                      try {
+                        const currentChecklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false };
+                        await onUpdate(lead.id, {
+                          checklist_briefing: {
+                            ...currentChecklist,
+                            [item.id]: !currentChecklist[item.id as keyof typeof currentChecklist]
+                          }
+                        });
+                      } finally {
+                        setIsUpdatingChecklist(null);
+                      }
                     }}
-                    className="w-full flex items-center justify-between group py-1"
+                    className="w-full flex items-center justify-between group py-1 disabled:opacity-50"
                   >
                     <span className={cn(
                       "text-xs font-medium transition-colors",
@@ -457,7 +464,11 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                         ? "bg-indigo-600 border-indigo-600 text-white"
                         : "bg-white border-zinc-200 group-hover:border-zinc-300"
                     )}>
-                      {lead.checklist_briefing?.[item.id as keyof NonNullable<Lead['checklist_briefing']>] && <CheckCircle2 size={12} />}
+                      {isUpdatingChecklist === item.id ? (
+                        <Loader2 size={10} className="animate-spin" />
+                      ) : (
+                        lead.checklist_briefing?.[item.id as keyof NonNullable<Lead['checklist_briefing']>] && <CheckCircle2 size={12} />
+                      )}
                     </div>
                   </button>
                 ))}

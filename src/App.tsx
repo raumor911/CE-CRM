@@ -22,7 +22,8 @@ export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { leads, loading, createLead: supabaseCreateLead, updateLead: supabaseUpdateLead } = useSupabaseLeads();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
   const [currentView, setCurrentView] = useState<'dashboard' | 'pipeline' | 'directory' | 'settings'>('pipeline');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -180,7 +181,7 @@ export default function App() {
                   <KanbanBoard 
                     leads={leads} 
                     onUpdateLead={handleUpdateLead}
-                    onSelectLead={setSelectedLead}
+                    onSelectLead={(lead) => setSelectedLeadId(lead.id)}
                   />
                 )}
                 {currentView === 'dashboard' && <DashboardView leads={leads} />}
@@ -209,7 +210,7 @@ export default function App() {
         {selectedLead && (
           <LeadDetailModal
             lead={selectedLead}
-            onClose={() => setSelectedLead(null)}
+            onClose={() => setSelectedLeadId(null)}
             onUpdate={handleUpdateLead}
           />
         )}
