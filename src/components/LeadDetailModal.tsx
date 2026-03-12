@@ -249,6 +249,32 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     setNewNote('');
   };
 
+  const handleConfirmDeposit = async () => { 
+    const amountStr = window.prompt( 
+      "Introduce el monto del adelanto de depósito (MXN):", 
+      lead.budget?.toString() 
+    ); 
+    
+    const amount = parseFloat(amountStr || ""); 
+  
+    if (isNaN(amount) || amount <= 0) { 
+      alert("Por favor, introduce un monto válido para procesar el cierre."); 
+      return; 
+    } 
+  
+    try { 
+      // Esta actualización dispara el trigger tr_vantage_sync en Supabase 
+      await onUpdate(lead.id, { 
+        payment_confirmed: true, 
+        monto_anticipo_real: amount,
+        contract_signed_at: new Date().toISOString(),
+        stage: 'Cierre'
+      }); 
+    } catch (error) { 
+      console.error("Error al registrar el depósito:", error); 
+    } 
+  }; 
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
       <motion.div
@@ -435,45 +461,37 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Hito de Cierre de Venta</h3>
-              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 shadow-sm space-y-3">
-                <button
-                  onClick={async () => {
-                    if (lead.contract_signed_at) return;
-                    if (confirm('¿Confirmas que se ha recibido el ADELANTO DE DEPÓSITO? Esta acción registrará el hito financiero.')) {
-                      await onUpdate(lead.id, { 
-                        contract_signed_at: new Date().toISOString(),
-                        stage: 'Cierre'
-                      });
-                    }
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between p-3 rounded-xl transition-all border shadow-sm",
-                    lead.contract_signed_at 
-                      ? "bg-emerald-600 border-emerald-500 text-white cursor-default" 
-                      : "bg-white border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:shadow-md active:scale-[0.98]"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-6 h-6 rounded-lg flex items-center justify-center transition-all",
-                      lead.contract_signed_at ? "bg-white/20" : "bg-emerald-100"
-                    )}>
-                      {lead.contract_signed_at ? <CheckCircle2 size={14} /> : <TrendingUp size={14} />}
-                    </div>
-                    <span className="text-xs font-black uppercase tracking-tight">
-                      {lead.contract_signed_at ? "Adelanto Recibido" : "Adelanto de Depósito"}
-                    </span>
-                  </div>
-                  {!lead.contract_signed_at && <Plus size={16} />}
-                </button>
-                {lead.contract_signed_at && (
-                  <p className="text-[10px] text-emerald-600 font-bold text-center italic">
-                    Registrado: {new Date(lead.contract_signed_at).toLocaleString('es-MX')}
-                  </p>
-                )}
-              </div>
+            <div className="space-y-4"> 
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Estado Financiero</h3> 
+              
+              {!lead.payment_confirmed ? ( 
+                <button 
+                  onClick={handleConfirmDeposit} 
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-1 transition-all shadow-lg shadow-emerald-600/20 group" 
+                > 
+                  <div className="flex items-center gap-2"> 
+                    <DollarSign size={18} className="group-hover:scale-110 transition-transform" /> 
+                    <span>Adelanto de Depósito</span> 
+                  </div> 
+                  <span className="text-[9px] opacity-70 uppercase tracking-tighter">Registrar pago para cerrar</span> 
+                </button> 
+              ) : ( 
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2"> 
+                  <div className="flex items-center justify-between"> 
+                    <span className="text-[10px] font-bold text-emerald-600 uppercase">Pago Confirmado</span> 
+                    <CheckCircle2 size={14} className="text-emerald-500" /> 
+                  </div> 
+                  <p className="text-lg font-black text-emerald-900"> 
+                    ${lead.monto_anticipo_real?.toLocaleString()} 
+                  </p> 
+                  {lead.contract_signed_at && ( 
+                    <div className="pt-2 border-t border-emerald-100 flex items-center gap-1.5 text-[9px] text-emerald-600/70 font-bold uppercase"> 
+                      <Clock size={10} /> 
+                      <span>Sello: {new Date(lead.contract_signed_at).toLocaleString('es-MX')}</span> 
+                    </div> 
+                  )} 
+                </div> 
+              )} 
             </div>
 
             <div className="pt-4 border-t border-zinc-100 space-y-3">
