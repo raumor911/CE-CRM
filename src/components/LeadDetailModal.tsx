@@ -436,6 +436,21 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
             </div>
 
             <div className="pt-4 border-t border-zinc-100 space-y-3">
+              {lead.stage === 'Cierre' && (
+                <button 
+                  onClick={() => onUpdate(lead.id, { payment_confirmed: !lead.payment_confirmed })} 
+                  className={cn( 
+                    "w-full py-3 rounded-xl font-bold transition-all border flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10", 
+                    lead.payment_confirmed 
+                      ? "bg-emerald-600 border-emerald-500 text-white" 
+                      : "bg-white text-zinc-400 border-zinc-200 hover:border-emerald-300 hover:text-emerald-600" 
+                  )} 
+                > 
+                  <CheckCircle2 size={18} /> 
+                  <span>{lead.payment_confirmed ? "Pago Confirmado en Vantage" : "Confirmar Pago (Sincronizar)"}</span> 
+                </button>
+              )}
+
               <button 
                 onClick={() => setIsActivityModalOpen(true)}
                 className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-zinc-900/10 flex items-center justify-center gap-2"

@@ -31,6 +31,8 @@ export interface Lead {
   created_at?: string;
   assigned_to?: string;
   user_id?: string;
+  payment_confirmed?: boolean;
+  monto_anticipo_real?: number;
 }
 
 export interface LeadDocument {
