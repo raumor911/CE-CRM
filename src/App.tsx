@@ -81,13 +81,18 @@ export default function App() {
 
   const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
     try {
+      console.log('App - Enviando actualización:', id, updates);
       await supabaseUpdateLead(id, { ...updates, last_activity: new Date().toISOString() });
       showToast("Lead actualizado", "success");
     } catch (error: any) {
       console.error("Error al actualizar lead:", error);
-      // Extraer el mensaje de error de Supabase si existe
       const errorMessage = error.details || error.message || "Error al actualizar el lead";
       showToast(errorMessage, "error");
+      
+      // Si el error es de constraint, lanzamos un alert para que sea ineludible
+      if (errorMessage.includes('logic_vantage_shield')) {
+        alert(`🚨 ERROR DE NEGOCIO (Vantage Shield):\n\nLa base de datos rechazó el cambio a Cierre. \n\nDetalle: ${errorMessage}`);
+      }
     }
   };
 

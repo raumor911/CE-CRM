@@ -7,11 +7,15 @@ import {
   useSensor, 
   useSensors, 
   closestCorners,
-  DragOverlay
+  closestCenter,
+  DragOverlay,
+  TouchSensor,
+  KeyboardSensor
 } from '@dnd-kit/core';
 import { 
   SortableContext, 
-  verticalListSortingStrategy 
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates
 } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { Lead } from '../types';
@@ -96,11 +100,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -111,6 +113,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    console.log('DragEnd - Detalle:', { activeId: active.id, overId: over?.id });
     setActiveLead(null);
     
     if (!over) return;
@@ -122,34 +125,32 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     let newStage: string | undefined;
 
     if (VALID_STAGES.includes(overId)) {
-      // Si caemos sobre una columna (el id es la etapa)
       newStage = overId;
     } else {
-      // Si caemos sobre otra tarjeta, buscamos a qué etapa pertenece esa tarjeta
       const targetLead = leads.find(l => l.id === overId);
       newStage = targetLead?.stage;
     }
 
-    // VALIDACIÓN: Solo actualizar si es una etapa válida y distinta a la actual
-    if (newStage && VALID_STAGES.includes(newStage)) {
+    if (newStage && STAGES.includes(newStage as any)) {
       const lead = leads.find(l => l.id === activeId);
       if (lead && lead.stage !== newStage) {
-        // VALIDACIÓN ADICIONAL PARA CIERRE (Shield Logic)
         if (newStage === 'Cierre') {
           const isChecklistComplete = 
             lead.checklist_briefing?.m2 && 
             lead.checklist_briefing?.style_defined && 
             lead.checklist_briefing?.deadlines;
           
-          if (!lead.email || !isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) {
+          // VALIDACIÓN FLEXIBLE PARA CIERRE (Vantage Shield 2.0)
+          // Eliminamos el requisito de Email obligatorio para cerrar
+          if (!isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) {
             const missing = [];
-            if (!lead.email) missing.push("Correo electrónico");
-            if (!isChecklistComplete) missing.push("Checklist de Briefing completo (3/3 puntos marcados)");
-            if (lead.sentiment_label !== 'Entusiasta') missing.push("Sentimiento 'Entusiasta'");
-            if ((lead.budget || 0) <= 0) missing.push("Presupuesto mayor a 0");
+            if (!isChecklistComplete) missing.push("Checklist de Briefing completo (3/3)");
+            if (lead.sentiment_label !== 'Entusiasta') missing.push("Sentimiento 'Entusiasta' (indispensable para cierre)");
+            if ((lead.budget || 0) <= 0) missing.push("Presupuesto definido (mayor a 0)");
 
-            alert(`No se puede mover a 'Cierre' aún. Faltan estos requisitos de la regla 'Vantage Shield':\n\n- ${missing.join('\n- ')}`);
-            return;
+            alert(`Asegúrate de cumplir con los requisitos comerciales antes de cerrar:\n\n- ${missing.join('\n- ')}`);
+            
+            if (missing.length > 0) return;
           }
         }
         onUpdateLead(activeId, { stage: newStage as Lead['stage'] });
@@ -160,7 +161,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
   return (
     <DndContext 
       sensors={sensors} 
-      collisionDetection={closestCorners} 
+      collisionDetection={closestCenter} 
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
