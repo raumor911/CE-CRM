@@ -131,28 +131,29 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
       newStage = targetLead?.stage;
     }
 
-    if (newStage && STAGES.includes(newStage as any)) {
+    if (newStage && VALID_STAGES.includes(newStage)) {
       const lead = leads.find(l => l.id === activeId);
+      
       if (lead && lead.stage !== newStage) {
-        if (newStage === 'Cierre') {
-          const isChecklistComplete = 
-            lead.checklist_briefing?.m2 && 
-            lead.checklist_briefing?.style_defined && 
-            lead.checklist_briefing?.deadlines;
+        
+        // --- VALIDACIÓN VANTAGE SHIELD 2.0 --- 
+        if (newStage === 'Cierre') { 
+          const checklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false }; 
+          const isChecklistComplete = checklist.m2 && checklist.style_defined && checklist.deadlines; 
           
-          // VALIDACIÓN FLEXIBLE PARA CIERRE (Vantage Shield 2.0)
-          // Eliminamos el requisito de Email obligatorio para cerrar
-          if (!isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) {
-            const missing = [];
-            if (!isChecklistComplete) missing.push("Checklist de Briefing completo (3/3)");
-            if (lead.sentiment_label !== 'Entusiasta') missing.push("Sentimiento 'Entusiasta' (indispensable para cierre)");
-            if ((lead.budget || 0) <= 0) missing.push("Presupuesto definido (mayor a 0)");
+          // ELIMINADO: !lead.email (Ya no es obligatorio para cerrar) 
+          if (!isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) { 
+            const missing = []; 
+            if (!isChecklistComplete) missing.push("Checklist de Briefing completo (3/3 puntos)"); 
+            if (lead.sentiment_label !== 'Entusiasta') missing.push("Sentimiento debe ser 'Entusiasta'"); 
+            if ((lead.budget || 0) <= 0) missing.push("Presupuesto debe ser mayor a 0"); 
+  
+            alert(`No se puede mover a 'Cierre' aún. Requisitos pendientes:\n\n- ${missing.join('\n- ')}`); 
+            return; 
+          } 
+        } 
+        // ------------------------------------- 
 
-            alert(`Asegúrate de cumplir con los requisitos comerciales antes de cerrar:\n\n- ${missing.join('\n- ')}`);
-            
-            if (missing.length > 0) return;
-          }
-        }
         onUpdateLead(activeId, { stage: newStage as Lead['stage'] });
       }
     }
