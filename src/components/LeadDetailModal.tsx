@@ -250,27 +250,33 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   };
 
   const handleConfirmDeposit = async () => { 
+    console.log("Iniciando proceso de depósito para:", lead.id); // <-- Debug 
+    
     const amountStr = window.prompt( 
       "Introduce el monto del adelanto de depósito (MXN):", 
-      lead.budget?.toString() 
+      lead.budget?.toString() || "0" 
     ); 
     
-    const amount = parseFloat(amountStr || ""); 
+    if (amountStr === null) return; // El usuario canceló el prompt 
+  
+    const amount = parseFloat(amountStr); 
   
     if (isNaN(amount) || amount <= 0) { 
-      alert("Por favor, introduce un monto válido mayor a 0 para proceder."); 
+      alert("Por favor, introduce un monto válido mayor a 0."); 
       return; 
     } 
   
     try { 
-      // Esta llamada activa el trigger de Supabase y sella contract_signed_at 
+      // Sincronización completa con Vantage 
       await onUpdate(lead.id, { 
         payment_confirmed: true, 
-        monto_anticipo_real: amount 
+        monto_anticipo_real: amount, 
+        contract_signed_at: new Date().toISOString(), 
+        stage: 'Cierre' // Movimiento automático al confirmar dinero 
       }); 
-      alert("¡Depósito confirmado y contrato sellado!"); 
+      console.log("Depósito registrado con éxito"); 
     } catch (error) { 
-      console.error("Falla en confirmación:", error); 
+      console.error("Error al registrar el depósito:", error); 
     } 
   }; 
 
@@ -465,7 +471,11 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               
               {!lead.payment_confirmed ? ( 
                 <button 
-                  onClick={handleConfirmDeposit} // <-- Aquí se activa la interacción 
+                  type="button" // Forzamos tipo button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); // Evitamos que el modal se cierre o haga otra cosa 
+                    handleConfirmDeposit(); 
+                  }} 
                   className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-1 transition-all shadow-lg shadow-emerald-600/20 group" 
                 > 
                   <div className="flex items-center gap-2"> 
