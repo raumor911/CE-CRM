@@ -258,20 +258,19 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     const amount = parseFloat(amountStr || ""); 
   
     if (isNaN(amount) || amount <= 0) { 
-      alert("Por favor, introduce un monto válido para procesar el cierre."); 
+      alert("Por favor, introduce un monto válido mayor a 0 para proceder."); 
       return; 
     } 
   
     try { 
-      // Esta actualización dispara el trigger tr_vantage_sync en Supabase 
+      // Esta llamada activa el trigger de Supabase y sella contract_signed_at 
       await onUpdate(lead.id, { 
         payment_confirmed: true, 
-        monto_anticipo_real: amount,
-        contract_signed_at: new Date().toISOString(),
-        stage: 'Cierre'
+        monto_anticipo_real: amount 
       }); 
+      alert("¡Depósito confirmado y contrato sellado!"); 
     } catch (error) { 
-      console.error("Error al registrar el depósito:", error); 
+      console.error("Falla en confirmación:", error); 
     } 
   }; 
 
@@ -461,33 +460,33 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </div>
             </div>
 
-            <div className="space-y-4"> 
-              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Estado Financiero</h3> 
+            <div className="space-y-4 pt-4 border-t border-zinc-100"> 
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Validación de Cierre</h3> 
               
               {!lead.payment_confirmed ? ( 
                 <button 
-                  onClick={handleConfirmDeposit} 
+                  onClick={handleConfirmDeposit} // <-- Aquí se activa la interacción 
                   className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-1 transition-all shadow-lg shadow-emerald-600/20 group" 
                 > 
                   <div className="flex items-center gap-2"> 
                     <DollarSign size={18} className="group-hover:scale-110 transition-transform" /> 
                     <span>Adelanto de Depósito</span> 
                   </div> 
-                  <span className="text-[9px] opacity-70 uppercase tracking-tighter">Registrar pago para cerrar</span> 
+                  <span className="text-[9px] opacity-70 uppercase tracking-tighter">Registrar pago para sincronizar</span> 
                 </button> 
               ) : ( 
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl space-y-2"> 
                   <div className="flex items-center justify-between"> 
-                    <span className="text-[10px] font-bold text-emerald-600 uppercase">Pago Confirmado</span> 
-                    <CheckCircle2 size={14} className="text-emerald-500" /> 
+                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Pago Confirmado</span> 
+                    <CheckCircle2 size={16} className="text-emerald-500" /> 
                   </div> 
-                  <p className="text-lg font-black text-emerald-900"> 
+                  <p className="text-xl font-black text-emerald-900"> 
                     ${lead.monto_anticipo_real?.toLocaleString()} 
                   </p> 
                   {lead.contract_signed_at && ( 
-                    <div className="pt-2 border-t border-emerald-100 flex items-center gap-1.5 text-[9px] text-emerald-600/70 font-bold uppercase"> 
+                    <div className="pt-2 border-t border-emerald-100 flex items-center gap-2 text-[9px] text-emerald-600/60 font-bold uppercase"> 
                       <Clock size={10} /> 
-                      <span>Sello: {new Date(lead.contract_signed_at).toLocaleString('es-MX')}</span> 
+                      <span>Sello: {new Date(lead.contract_signed_at).toLocaleString()}</span> 
                     </div> 
                   )} 
                 </div> 
@@ -495,20 +494,6 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
             </div>
 
             <div className="pt-4 border-t border-zinc-100 space-y-3">
-              {lead.stage === 'Cierre' && (
-                <button 
-                  onClick={() => onUpdate(lead.id, { payment_confirmed: !lead.payment_confirmed })} 
-                  className={cn( 
-                    "w-full py-3 rounded-xl font-bold transition-all border flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10", 
-                    lead.payment_confirmed 
-                      ? "bg-emerald-600 border-emerald-500 text-white" 
-                      : "bg-white text-zinc-400 border-zinc-200 hover:border-emerald-300 hover:text-emerald-600" 
-                  )} 
-                > 
-                  <CheckCircle2 size={18} /> 
-                  <span>{lead.payment_confirmed ? "Pago Confirmado en Vantage" : "Confirmar Pago (Sincronizar)"}</span> 
-                </button>
-              )}
 
               <button 
                 onClick={() => setIsActivityModalOpen(true)}
