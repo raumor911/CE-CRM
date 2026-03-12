@@ -33,6 +33,7 @@ export interface Lead {
   user_id?: string;
   payment_confirmed?: boolean;
   monto_anticipo_real?: number;
+  contract_signed_at?: string;
 }
 
 export interface LeadDocument {

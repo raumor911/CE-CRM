@@ -435,6 +435,47 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </div>
             </div>
 
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Hito de Cierre de Venta</h3>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 shadow-sm space-y-3">
+                <button
+                  onClick={async () => {
+                    if (lead.contract_signed_at) return;
+                    if (confirm('¿Confirmas que se ha recibido el ADELANTO DE DEPÓSITO? Esta acción registrará el hito financiero.')) {
+                      await onUpdate(lead.id, { 
+                        contract_signed_at: new Date().toISOString(),
+                        stage: 'Cierre'
+                      });
+                    }
+                  }}
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 rounded-xl transition-all border shadow-sm",
+                    lead.contract_signed_at 
+                      ? "bg-emerald-600 border-emerald-500 text-white cursor-default" 
+                      : "bg-white border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:shadow-md active:scale-[0.98]"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-6 h-6 rounded-lg flex items-center justify-center transition-all",
+                      lead.contract_signed_at ? "bg-white/20" : "bg-emerald-100"
+                    )}>
+                      {lead.contract_signed_at ? <CheckCircle2 size={14} /> : <TrendingUp size={14} />}
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-tight">
+                      {lead.contract_signed_at ? "Adelanto Recibido" : "Adelanto de Depósito"}
+                    </span>
+                  </div>
+                  {!lead.contract_signed_at && <Plus size={16} />}
+                </button>
+                {lead.contract_signed_at && (
+                  <p className="text-[10px] text-emerald-600 font-bold text-center italic">
+                    Registrado: {new Date(lead.contract_signed_at).toLocaleString('es-MX')}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="pt-4 border-t border-zinc-100 space-y-3">
               {lead.stage === 'Cierre' && (
                 <button 
