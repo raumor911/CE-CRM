@@ -398,7 +398,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                   </p> 
                 </div> 
 
-                {/* Botón de Adelanto / Estado de Pago - DESACTIVADO TEMPORALMENTE */}
+                {/* Botón de Adelanto / Estado de Pago - DESACTIVADO TEMPORALMENTE 
                 {!lead.payment_confirmed ? ( 
                   <button 
                     type="button" 
