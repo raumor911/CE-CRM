@@ -55,6 +55,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   const [isUpdatingChecklist, setIsUpdatingChecklist] = useState<string | null>(null);
 
   const archiveReasons = [
+    { id: 'Converted', label: 'Cliente convertido' },
     { id: 'Ghosting', label: 'Ghosting (Dejó de responder)' },
     { id: 'Price-Drop', label: 'Price-Drop (Presupuesto alto)' },
     { id: 'Timing', label: 'Timing (Interés futuro)' },
