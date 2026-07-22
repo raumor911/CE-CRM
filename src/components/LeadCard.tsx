@@ -211,15 +211,15 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
               )}
             </button>
 
-            {/* Cost of Wait Badge (Small) */}
-            {isDelayed && (
+            {/* Cost of Wait Badge (Small) - EN HOLD */}
+            {/* {isDelayed && (
               <div className={cn(
                 "ml-2 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono",
                 getCostOfWaitStyles(costOfWait)
               )}>
                 <span>{formatCurrency(costOfWait)}</span>
               </div>
-            )}
+            )} */}
           </div>
           
           {/* Botón de detalle */}

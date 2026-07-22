@@ -67,49 +67,16 @@ export const SettingsView: React.FC = () => {
         </div>
 
         <div className="md:col-span-3 space-y-8">
+          {/* Configuración de Cost of Wait - EN HOLD */}
+          {/* 
           <div className="bg-zinc-900/50 border border-zinc-800 p-8 rounded-2xl space-y-6">
             <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
               <DollarSign className="text-indigo-500" size={24} />
               <h3 className="text-lg font-bold text-white">Configuración de Cost of Wait</h3>
             </div>
-            
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Valor por Hora de Inactividad (MXN)</label>
-                <div className="relative">
-                  <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-                  <input
-                    type="number"
-                    value={costPerHour}
-                    onChange={(e) => setCostPerHour(Number(e.target.value))}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl py-3 pl-12 pr-4 text-white font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                  />
-                </div>
-                <p className="text-xs text-zinc-500 leading-relaxed">
-                  Este valor se utiliza para calcular la pérdida económica acumulada por cada hora que un lead permanece sin actividad en el pipeline.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/50 space-y-2">
-                  <div className="flex items-center gap-2 text-amber-500">
-                    <Clock size={16} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Umbral de Alerta</span>
-                  </div>
-                  <p className="text-xl font-black text-white">24 Horas</p>
-                  <p className="text-[10px] text-zinc-500">Tiempo antes de marcar como crítico.</p>
-                </div>
-                <div className="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700/50 space-y-2">
-                  <div className="flex items-center gap-2 text-rose-500">
-                    <Bell size={16} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Priorización Auto</span>
-                  </div>
-                  <p className="text-xl font-black text-white">Activado</p>
-                  <p className="text-[10px] text-zinc-500">Mueve leads estancados al inicio.</p>
-                </div>
-              </div>
-            </div>
+            ...
           </div>
+          */}
 
           <div className="bg-zinc-900/50 border border-zinc-800 p-8 rounded-2xl space-y-6">
             <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">

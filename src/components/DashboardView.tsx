@@ -52,23 +52,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <CostOfWaitDashboard leads={leads} />
+          {/* Cost of Wait Dashboard - EN HOLD */}
+          <div className="bg-white border border-slate-200 p-8 rounded-xl flex flex-col items-center justify-center text-center space-y-4 shadow-sm h-full min-h-[400px]">
+            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center">
+              <Clock size={32} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-slate-400">Análisis de Respuesta en Hold</h3>
+              <p className="text-sm text-slate-400 max-w-xs mx-auto">
+                La lógica de impacto económico está pausada temporalmente por ajustes estratégicos.
+              </p>
+            </div>
+          </div>
         </div>
         <div className="bg-white border border-slate-200 p-6 rounded-xl space-y-6 shadow-sm">
           <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <AlertCircle size={20} className="text-rose-500" />
-            Leads en Riesgo
+            <TrendingUp size={20} className="text-indigo-500" />
+            Leads en Seguimiento
           </h3>
           <div className="space-y-4">
-            {activeLeads.slice(0, 5).map(lead => (
+            {activeLeads
+              .filter(l => l.stage !== 'Ingreso') // Filtro: Solo desde Briefing en adelante
+              .slice(0, 6)
+              .map(lead => (
               <div key={lead.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-slate-900">{lead.lead_name}</span>
-                  <span className="text-[10px] text-slate-500">{lead.project_name}</span>
+                  <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{lead.stage}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-bold text-rose-600 font-mono">+$12.50</span>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Cost of Wait</p>
+                  <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase">Activo</span>
                 </div>
               </div>
             ))}
