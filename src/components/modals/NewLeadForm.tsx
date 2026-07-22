@@ -16,7 +16,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
     email: '',
     phone: '',
     budget: '',
-    category: 'Proyecto' as 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado',
+    category: 'Proyecto' as 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado' | 'Renta Contenedor' | 'Renta Oficina 20 ft',
     main_image_url: null as File | null
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -196,6 +196,8 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                       <option value="Compra Contenedor">Compra Contenedor</option>
                       <option value="Proyecto">Proyecto</option>
                       <option value="10 ft Modificado">10 ft Modificado</option>
+                      <option value="Renta Contenedor">Renta Contenedor</option>
+                      <option value="Renta Oficina 20 ft">Renta Oficina 20 ft</option>
                     </select>
                   </div>
 

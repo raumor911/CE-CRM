@@ -199,6 +199,8 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ isOpen, onClose, lea
                   <option value="Compra Contenedor">Compra Contenedor</option>
                   <option value="Proyecto">Proyecto</option>
                   <option value="10 ft Modificado">10 ft Modificado</option>
+                  <option value="Renta Contenedor">Renta Contenedor</option>
+                  <option value="Renta Oficina 20 ft">Renta Oficina 20 ft</option>
                 </select>
               </div>
 

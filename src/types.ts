@@ -11,7 +11,7 @@ export interface Lead {
   lead_name: string;
   email?: string;
   phone: string;
-  category: 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado';
+  category: 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado' | 'Renta Contenedor' | 'Renta Oficina 20 ft';
   contact_info?: string;
   calendar_event_id?: string;
   ai_suggested_questions?: string[];
