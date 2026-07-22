@@ -49,12 +49,14 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
   const handleMainAction = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    if (lead.stage === 'Propuesta') {
-      const budget = prompt("Define el presupuesto final para este proyecto:", lead.budget?.toString() || "0");
+    if (lead.stage === 'Propuesta' || lead.stage === 'Ingreso') {
+      const budget = prompt("Define el presupuesto para este proyecto:", lead.budget?.toString() || "0");
       if (budget !== null) {
         const numBudget = parseFloat(budget.replace(/[^0-9.]/g, ''));
         if (!isNaN(numBudget)) {
-          onUpdateLead(lead.id, { budget: numBudget, stage: 'Negociación' });
+          // Si está en ingreso, lo movemos a Briefing o lo dejamos ahí? 
+          // El usuario solo pidió actualizar el presupuesto.
+          onUpdateLead(lead.id, { budget: numBudget });
         }
       }
     } 
@@ -177,31 +179,18 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
           </span>
         </div>
 
-        {/* Main Action Button (Propuesta / Cierre) - DESACTIVADO TEMPORALMENTE
-        {((lead.stage === 'Propuesta') || (lead.stage === 'Cierre' && !lead.payment_confirmed)) && (
+        {/* Main Action Button (Propuesta / Ingreso sin presupuesto) */}
+        {((lead.stage === 'Propuesta') || (lead.stage === 'Ingreso' && (!lead.budget || lead.budget <= 0))) && (
           <button
             onClick={handleMainAction}
             className={cn(
-              "w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-              lead.stage === 'Propuesta' 
-                ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
-                : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20"
+              "w-full py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-500/20"
             )}
           >
-            {lead.stage === 'Propuesta' ? (
-              <>
-                <TrendingUp size={12} />
-                <span>Definir Presupuesto</span>
-              </>
-            ) : (
-              <>
-                <DollarSign size={12} />
-                <span>Confirmar Adelanto</span>
-              </>
-            )}
+            <TrendingUp size={12} />
+            <span>Definir Presupuesto</span>
           </button>
         )}
-        */}
 
         {/* Sección de acciones (conservamos WhatsApp y Detalle) */}
         <div className="flex items-center justify-between pt-2 border-t border-zinc-100">

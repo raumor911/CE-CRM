@@ -381,7 +381,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Control de Venta</h3> 
               
               <div className="grid grid-cols-1 gap-3"> 
-                {/* Tarjeta de Presupuesto Editable - DESACTIVADO TEMPORALMENTE
+                {/* Tarjeta de Presupuesto Editable */} 
                 <div 
                   onClick={handleUpdateBudget} 
                   className="p-4 bg-white border border-zinc-100 hover:border-emerald-200 rounded-2xl space-y-1 shadow-sm cursor-pointer transition-all group" 
@@ -397,9 +397,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                     {lead.budget ? formatCurrency(lead.budget) : 'Definir Presupuesto'} 
                   </p> 
                 </div> 
-                */}
 
-                {/* Botón de Adelanto / Estado de Pago - DESACTIVADO TEMPORALMENTE
+                {/* Botón de Adelanto / Estado de Pago - DESACTIVADO TEMPORALMENTE */}
                 {!lead.payment_confirmed ? ( 
                   <button 
                     type="button" 
