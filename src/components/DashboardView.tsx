@@ -50,38 +50,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          {/* Cost of Wait Dashboard - EN HOLD */}
-          <div className="bg-white border border-slate-200 p-8 rounded-xl flex flex-col items-center justify-center text-center space-y-4 shadow-sm h-full min-h-[400px]">
-            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center">
-              <Clock size={32} />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold text-slate-400">Análisis de Respuesta en Hold</h3>
-              <p className="text-sm text-slate-400 max-w-xs mx-auto">
-                La lógica de impacto económico está pausada temporalmente por ajustes estratégicos.
-              </p>
-            </div>
+      <div className="grid grid-cols-1 gap-8">
+        <div className="bg-white border border-slate-200 p-8 rounded-xl space-y-8 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-6">
+            <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
+              <TrendingUp size={24} className="text-indigo-500" />
+              Leads en Seguimiento (Briefing en adelante)
+            </h3>
+            <span className="bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest">
+              {activeLeads.filter(l => l.stage !== 'Ingreso').length} Leads Activos
+            </span>
           </div>
-        </div>
-        <div className="bg-white border border-slate-200 p-6 rounded-xl space-y-6 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <TrendingUp size={20} className="text-indigo-500" />
-            Leads en Seguimiento
-          </h3>
-          <div className="space-y-4">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {activeLeads
-              .filter(l => l.stage !== 'Ingreso') // Filtro: Solo desde Briefing en adelante
-              .slice(0, 6)
+              .filter(l => l.stage !== 'Ingreso')
               .map(lead => (
-              <div key={lead.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-900">{lead.lead_name}</span>
-                  <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{lead.stage}</span>
+              <div key={lead.id} className="group flex flex-col p-4 bg-slate-50 hover:bg-white hover:border-indigo-200 rounded-2xl border border-slate-100 transition-all hover:shadow-xl hover:shadow-indigo-500/5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-black text-slate-900 truncate group-hover:text-indigo-600 transition-colors">{lead.lead_name}</span>
+                    <span className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-tighter">{lead.project_name}</span>
+                  </div>
+                  <span className={cn(
+                    "text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0 ml-2",
+                    lead.stage === 'Briefing' ? "bg-blue-100 text-blue-600" :
+                    lead.stage === 'Propuesta' ? "bg-indigo-100 text-indigo-600" :
+                    lead.stage === 'Negociación' ? "bg-amber-100 text-amber-600" :
+                    "bg-emerald-100 text-emerald-600"
+                  )}>
+                    {lead.stage}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase">Activo</span>
+                
+                <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-200/50">
+                  <span className="text-xs font-black text-emerald-600">
+                    ${lead.budget?.toLocaleString()}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full animate-pulse",
+                      lead.sentiment_label === 'Entusiasta' ? "bg-emerald-500" :
+                      lead.sentiment_label === 'Dudoso' ? "bg-amber-500" : "bg-rose-500"
+                    )} />
+                    <span className="text-[9px] font-bold text-slate-500 uppercase">{lead.sentiment_label}</span>
+                  </div>
                 </div>
               </div>
             ))}
