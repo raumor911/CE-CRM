@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, Users, TrendingUp, Clock, AlertCircle } from 'lucide-react';
 import { Lead } from '../types';
-import { formatCurrency } from '../lib/utils';
+import { cn, formatCurrency } from '../lib/utils';
 import { CostOfWaitDashboard } from './CostOfWaitDashboard';
 import { motion } from 'motion/react';
 
