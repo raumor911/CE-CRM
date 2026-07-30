@@ -38,7 +38,10 @@ const KanbanColumn: React.FC<{
   onUpdateLead: (id: string, updates: Partial<Lead>) => void;
   onSelectLead: (lead: Lead) => void;
 }> = ({ id, title, leads, onUpdateLead, onSelectLead }) => {
-  const { setNodeRef, isOver } = useDroppable({ id });
+  const { setNodeRef, isOver } = useDroppable({ 
+    id,
+    data: { stage: id } // Añadimos la etapa a los metadatos del droppable
+  });
 
   const getStageColor = (stage: string) => {
     switch (stage) {
@@ -113,7 +116,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    console.log('DragEnd - Detalle:', { activeId: active.id, overId: over?.id });
     setActiveLead(null);
     
     if (!over) return;
@@ -121,15 +123,26 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Determinar la etapa de destino
+    // Determinar la etapa de destino de forma robusta
     let newStage: string | undefined;
 
-    if (VALID_STAGES.includes(overId)) {
+    // 1. Intentar obtener la etapa desde los metadatos del droppable (columna)
+    if (over.data.current?.stage) {
+      newStage = over.data.current.stage;
+    } 
+    // 2. Si caímos sobre una tarjeta, buscar su etapa
+    else if (VALID_STAGES.includes(overId)) {
       newStage = overId;
     } else {
       const targetLead = leads.find(l => l.id === overId);
       newStage = targetLead?.stage;
     }
+
+    console.log('DragEnd - Cambio de etapa:', { 
+      lead: activeId, 
+      from: leads.find(l => l.id === activeId)?.stage, 
+      to: newStage 
+    });
 
     if (newStage && VALID_STAGES.includes(newStage)) {
       const lead = leads.find(l => l.id === activeId);
@@ -141,7 +154,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
           const checklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false }; 
           const isChecklistComplete = checklist.m2 && checklist.style_defined && checklist.deadlines; 
           
-          // ELIMINADO: !lead.email (Ya no es obligatorio para cerrar) 
           if (!isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) { 
             const missing = []; 
             if (!isChecklistComplete) missing.push("Checklist de Briefing completo (3/3 puntos)"); 
@@ -162,7 +174,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
   return (
     <DndContext 
       sensors={sensors} 
-      collisionDetection={closestCenter} 
+      collisionDetection={closestCorners} 
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
