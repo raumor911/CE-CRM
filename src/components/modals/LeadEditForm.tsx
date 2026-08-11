@@ -74,7 +74,7 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
         >
             <div className="p-6 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20">
               <div>
-                <h2 className="text-xl font-bold text-zinc-900">Editar Proyecto</h2>
+                <h2 className="text-xl font-bold text-zinc-900">Editar Información del Cliente</h2>
                 <p className="text-xs text-zinc-500 font-medium">{formData.project_name}</p>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
