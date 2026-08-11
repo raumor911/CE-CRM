@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { MessageSquare, ExternalLink, TrendingUp, DollarSign } from 'lucide-react';
+import { MessageSquare, ExternalLink, TrendingUp, DollarSign, AlertCircle } from 'lucide-react';
 import { Lead } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 import { differenceInHours, parseISO } from 'date-fns';
@@ -145,10 +145,14 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
           Moviendo...
         </div>
       )}
+      
       {/* Priority Indicator */}
-      {lead.is_priority && (
-        <div className="absolute -left-10 top-3 rotate-[-45deg] bg-amber-400 text-amber-950 text-[9px] font-black py-1 px-10 z-20 shadow-sm uppercase tracking-wider">
-          PRIORIDAD
+      {lead.is_priority && !isOverlay && (
+        <div className="absolute -top-2 -right-2 z-20">
+          <span className="bg-rose-500 text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg shadow-rose-500/30 flex items-center gap-1 animate-pulse border-2 border-white">
+            <AlertCircle size={10} />
+            PRIORIDAD
+          </span>
         </div>
       )}
 

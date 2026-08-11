@@ -368,6 +368,19 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </button>
             )}
             <button
+              onClick={() => onUpdate(lead.id, { is_priority: !lead.is_priority })}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm border",
+                lead.is_priority 
+                  ? "bg-rose-500 text-white border-rose-600 shadow-rose-500/30" 
+                  : "bg-white text-zinc-500 border-zinc-200 hover:border-rose-200 hover:text-rose-500"
+              )}
+              title={lead.is_priority ? "Quitar Alta Prioridad" : "Marcar como Alta Prioridad"}
+            >
+              <AlertCircle size={16} />
+              <span className="hidden sm:inline">{lead.is_priority ? "Alta Prioridad" : "Prioridad"}</span>
+            </button>
+            <button
               onClick={() => setIsEditModalOpen(true)}
               className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-500 hover:text-zinc-900 transition-all"
               title="Editar Lead"
