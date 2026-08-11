@@ -76,7 +76,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
                     "text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0 ml-2",
                     lead.stage === 'Briefing' ? "bg-blue-100 text-blue-600" :
                     lead.stage === 'Propuesta' ? "bg-indigo-100 text-indigo-600" :
-                    lead.stage === 'Negociación' ? "bg-amber-100 text-amber-600" :
                     "bg-emerald-100 text-emerald-600"
                   )}>
                     {lead.stage}

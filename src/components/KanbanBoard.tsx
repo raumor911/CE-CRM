@@ -29,7 +29,7 @@ interface KanbanBoardProps {
   onSelectLead: (lead: Lead) => void;
 }
 
-const VALID_STAGES = ['Ingreso', 'Briefing', 'Propuesta', 'Negociación', 'Cierre'];
+const VALID_STAGES = ['Ingreso', 'Briefing', 'Propuesta', 'Cierre'];
 
 const KanbanColumn: React.FC<{
   id: string;
@@ -48,7 +48,6 @@ const KanbanColumn: React.FC<{
       case 'Ingreso': return 'bg-blue-500';
       case 'Briefing': return 'bg-amber-500';
       case 'Propuesta': return 'bg-brand-primary';
-      case 'Negociación': return 'bg-purple-500';
       case 'Cierre': return 'bg-emerald-500';
       default: return 'bg-slate-400';
     }
@@ -151,12 +150,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
         
         // --- VALIDACIÓN VANTAGE SHIELD 2.0 --- 
         if (newStage === 'Cierre') { 
-          const checklist = lead.checklist_briefing || { m2: false, style_defined: false, deadlines: false }; 
-          const isChecklistComplete = checklist.m2 && checklist.style_defined && checklist.deadlines; 
+          const checklist = lead.checklist_briefing || { m2: false, deadlines: false }; 
+          const isChecklistComplete = checklist.m2 && checklist.deadlines; 
           
           if (!isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) { 
             const missing = []; 
-            if (!isChecklistComplete) missing.push("Checklist de Briefing completo (3/3 puntos)"); 
+            if (!isChecklistComplete) missing.push("Checklist de Briefing completo (2/2 puntos)"); 
             if (lead.sentiment_label !== 'Entusiasta') missing.push("Sentimiento debe ser 'Entusiasta'"); 
             if ((lead.budget || 0) <= 0) missing.push("Presupuesto debe ser mayor a 0"); 
   

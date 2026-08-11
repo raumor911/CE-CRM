@@ -135,7 +135,6 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ leads: initialLead
                         lead.stage === 'Ingreso' ? "bg-blue-50 text-blue-600" :
                         lead.stage === 'Briefing' ? "bg-amber-50 text-amber-600" :
                         lead.stage === 'Propuesta' ? "bg-indigo-50 text-indigo-600" :
-                        lead.stage === 'Negociación' ? "bg-purple-50 text-purple-600" :
                         "bg-emerald-50 text-emerald-600"
                       )}>
                         {lead.stage}

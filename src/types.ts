@@ -3,7 +3,7 @@ export type Sentiment = 'Entusiasta' | 'Dudoso' | 'Preocupado' | string;
 export interface Lead {
   id: string; // UUID
   project_name: string;
-  stage: 'Ingreso' | 'Briefing' | 'Propuesta' | 'Negociación' | 'Cierre';
+  stage: 'Ingreso' | 'Briefing' | 'Propuesta' | 'Cierre';
   budget?: number;
   last_activity: string;
   sentiment_label: Sentiment;
@@ -11,7 +11,7 @@ export interface Lead {
   lead_name: string;
   email?: string;
   phone: string;
-  category: 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado' | 'Renta Contenedor' | 'Renta Oficina 20 ft';
+  category: 'Compra Contenedor' | 'Proyecto' | '10 ft Modificado' | 'Renta Contenedor' | 'Renta Oficina 20 ft' | 'Cliente convertido';
   contact_info?: string;
   calendar_event_id?: string;
   ai_suggested_questions?: string[];
@@ -19,7 +19,6 @@ export interface Lead {
   stage_entry_timestamp?: string;
   checklist_briefing?: {
     m2: boolean;
-    style_defined: boolean;
     deadlines: boolean;
   };
   ai_notes?: string;

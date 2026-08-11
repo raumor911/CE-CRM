@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { Lead } from '../types';
 
-export const importLeadsFromCSV = async (csvText: string, targetStage: 'Ingreso' | 'Briefing' | 'Propuesta' | 'Negociación' | 'Cierre' = 'Ingreso') => {
+export const importLeadsFromCSV = async (csvText: string, targetStage: 'Ingreso' | 'Briefing' | 'Propuesta' | 'Cierre' = 'Ingreso') => {
   const lines = csvText.split('\n');
   // Find the header line to start parsing
   const headerIndex = lines.findIndex(l => l.includes('Oportunidad_ID') && l.includes('Nombre'));

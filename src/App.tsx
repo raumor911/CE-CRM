@@ -51,7 +51,7 @@ export default function App() {
         last_activity: new Date().toISOString(),
         sentiment_label: 'Dudoso',
         main_image_url: '', // Enviamos cadena vacía para evitar errores de tipo
-        checklist_briefing: { m2: false, style_defined: false, deadlines: false }
+        checklist_briefing: { m2: false, deadlines: false }
       };
 
       // 2. INSERCIÓN EN SUPABASE

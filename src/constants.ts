@@ -18,7 +18,7 @@ export const MOCK_LEADS: Lead[] = [
   {
     id: "uuid-2",
     project_name: "Oficinas Tech",
-    stage: "Negociación",
+    stage: "Propuesta",
     budget: 45000,
     last_activity: "2026-02-25T08:00:00",
     sentiment_label: "Preocupado",
@@ -56,7 +56,7 @@ export const MOCK_LEADS: Lead[] = [
     email: "sofia.martinez@example.com",
     phone: "+52 55 4444 4444",
     category: "Proyecto",
-    checklist_briefing: { m2: true, style_defined: true, deadlines: false }
+    checklist_briefing: { m2: true, deadlines: false }
   },
   {
     id: "uuid-5",
@@ -73,4 +73,4 @@ export const MOCK_LEADS: Lead[] = [
   }
 ];
 
-export const STAGES = ["Ingreso", "Briefing", "Propuesta", "Negociación", "Cierre"] as const;
+export const STAGES = ["Ingreso", "Briefing", "Propuesta", "Cierre"] as const;
