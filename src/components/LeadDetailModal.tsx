@@ -18,7 +18,8 @@ import {
   Trash2,
   Download,
   Archive,
-  AlertTriangle
+  AlertTriangle,
+  Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lead, LeadDocument, LeadActivity } from '../types';
@@ -30,6 +31,8 @@ import { ActivityModal } from './modals/ActivityModal';
 import { CatalystMediaViewer } from './CatalystMediaViewer';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+import { LeadEditForm } from './modals/LeadEditForm';
 
 interface LeadDetailModalProps {
   lead: Lead;
@@ -47,6 +50,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [viewingFile, setViewingFile] = useState<(LeadDocument & { url: string }) | null>(null);
   const [isGeneratingUrl, setIsGeneratingUrl] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
@@ -363,6 +367,13 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 Recuperar Lead
               </button>
             )}
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-500 hover:text-zinc-900 transition-all"
+              title="Editar Lead"
+            >
+              <Edit2 size={20} />
+            </button>
             <button
               onClick={onClose}
               className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-500 hover:text-zinc-900 transition-all"
@@ -800,6 +811,13 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
           <CatalystMediaViewer 
             file={viewingFile} 
             onClose={() => setViewingFile(null)} 
+          />
+        )}
+        {isEditModalOpen && (
+          <LeadEditForm
+            lead={lead}
+            onClose={() => setIsEditModalOpen(false)}
+            onUpdate={onUpdate}
           />
         )}
         {isGeneratingUrl && (

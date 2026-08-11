@@ -4,41 +4,38 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lead, Sentiment } from '../../types';
 
 interface LeadEditFormProps {
-  isOpen: boolean;
   onClose: () => void;
   lead: Lead;
-  onUpdate: (updates: Partial<Lead>) => void;
+  onUpdate: (id: string, updates: Partial<Lead>) => Promise<any>;
 }
 
-export const LeadEditForm: React.FC<LeadEditFormProps> = ({ isOpen, onClose, lead, onUpdate }) => {
+export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpdate }) => {
   const [formData, setFormData] = useState({
-    project_name: lead.project_name,
-    lead_name: lead.lead_name,
+    project_name: lead.project_name || '',
+    lead_name: lead.lead_name || '',
     email: lead.email || '',
-    phone: lead.phone,
-    budget: lead.budget.toString(),
+    phone: lead.phone || '',
+    budget: lead.budget?.toString() || '0',
     category: lead.category,
     sentiment_label: lead.sentiment_label,
-    main_image_url: lead.main_image_url
+    main_image_url: lead.main_image_url || ''
   });
   const [newImage, setNewImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        project_name: lead.project_name,
-        lead_name: lead.lead_name,
-        email: lead.email || '',
-        phone: lead.phone,
-        budget: lead.budget.toString(),
-        category: lead.category,
-        sentiment_label: lead.sentiment_label,
-        main_image_url: lead.main_image_url
-      });
-      setNewImage(null);
-    }
-  }, [isOpen, lead]);
+    setFormData({
+      project_name: lead.project_name || '',
+      lead_name: lead.lead_name || '',
+      email: lead.email || '',
+      phone: lead.phone || '',
+      budget: lead.budget?.toString() || '0',
+      category: lead.category,
+      sentiment_label: lead.sentiment_label,
+      main_image_url: lead.main_image_url || ''
+    });
+    setNewImage(null);
+  }, [lead]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,29 +67,33 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ isOpen, onClose, lea
       updates.main_image_url = URL.createObjectURL(newImage);
     }
 
-    onUpdate(updates);
-    setIsSubmitting(false);
-    onClose();
+    try {
+      await onUpdate(lead.id, updates);
+      onClose();
+    } catch (error) {
+      console.error("Error updating lead:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          />
-          
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
-          >
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        />
+        
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+        >
             <div className="p-6 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20">
               <div>
                 <h2 className="text-xl font-bold text-zinc-900">Editar Proyecto</h2>
@@ -266,7 +267,6 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ isOpen, onClose, lea
             </form>
           </motion.div>
         </div>
-      )}
-    </AnimatePresence>
-  );
-};
+      </AnimatePresence>
+    );
+  };
