@@ -19,7 +19,8 @@ import {
   Download,
   Archive,
   AlertTriangle,
-  Edit2
+  Edit2,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lead, LeadDocument, LeadActivity } from '../types';

@@ -1,12 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, Users, TrendingUp, Clock, AlertCircle, 
   Target, Zap, TrendingDown, CalendarDays, Activity,
-  DollarSign, ShieldAlert, Flame, CheckCircle2, ArrowRight
+  DollarSign, ShieldAlert, Flame, CheckCircle2, ArrowRight,
+  ChevronDown, Check
 } from 'lucide-react';
 import { Lead } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const DAYS_TO_STALE = 7;
 const STAGE_WEIGHTS: Record<string, number> = {
@@ -29,8 +30,180 @@ const getDaysAgo = (dateStr: string): number => {
   return getDaysBetween(dateStr, new Date().toISOString());
 };
 
+type PeriodKey = 'weekly' | 'biweekly' | 'monthly' | 'yearly';
+const PERIOD_LABELS: Record<PeriodKey, string> = {
+  weekly: 'Semanal',
+  biweekly: 'Quincenal',
+  monthly: 'Mensual',
+  yearly: 'Anual'
+};
+const PERIOD_DESC: Record<PeriodKey, string> = {
+  weekly: 'Semana calendario',
+  biweekly: 'Quincena (Q1/Q2)',
+  monthly: 'Mes calendario',
+  yearly: 'Año calendario'
+};
+
+const getISOWeekString = (date: Date) => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+};
+
+const getDefaultPeriodValue = (type: PeriodKey) => {
+  const now = new Date();
+  switch(type) {
+    case 'weekly': return getISOWeekString(now);
+    case 'biweekly': return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getDate() <= 15 ? 'Q1' : 'Q2'}`;
+    case 'monthly': return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    case 'yearly': return now.getFullYear().toString();
+  }
+};
+
+const isDateInPeriod = (dateStr: string, periodType: PeriodKey, periodValue: string) => {
+  if (!dateStr || !periodValue) return false;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return false;
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+
+  if (periodType === 'yearly') {
+    return y.toString() === periodValue;
+  }
+  if (periodType === 'monthly') {
+    return `${y}-${m}` === periodValue;
+  }
+  if (periodType === 'biweekly') {
+    const [py, pm, pq] = periodValue.split('-');
+    if (y.toString() !== py || m !== pm) return false;
+    const dateNum = d.getDate();
+    if (pq === 'Q1') return dateNum <= 15;
+    if (pq === 'Q2') return dateNum > 15;
+    return false;
+  }
+  if (periodType === 'weekly') {
+    return getISOWeekString(d) === periodValue;
+  }
+  return false;
+};
+
+const PeriodValueInput = ({ 
+  type, 
+  value, 
+  onChange, 
+  color 
+}: { 
+  type: PeriodKey, 
+  value: string, 
+  onChange: (v: string) => void, 
+  color: 'indigo' | 'emerald' 
+}) => {
+  const baseClasses = cn(
+    "h-6 px-2 text-[10px] font-bold rounded-lg border bg-white shadow-sm focus:outline-none transition-colors",
+    color === 'indigo' 
+      ? "border-indigo-100 text-indigo-700 focus:border-indigo-300 focus:ring-1 focus:ring-indigo-300" 
+      : "border-emerald-100 text-emerald-700 focus:border-emerald-300 focus:ring-1 focus:ring-emerald-300"
+  );
+  
+  if (type === 'yearly') {
+    return (
+      <input 
+        type="number" 
+        min="2000" max="2100" 
+        value={value} 
+        onChange={e => onChange(e.target.value)} 
+        className={cn(baseClasses, "w-16 text-center")} 
+      />
+    );
+  }
+  
+  if (type === 'monthly') {
+    return (
+      <input 
+        type="month" 
+        value={value} 
+        onChange={e => onChange(e.target.value)} 
+        className={cn(baseClasses, "w-[110px]")} 
+      />
+    );
+  }
+
+  if (type === 'weekly') {
+    return (
+      <input 
+        type="week" 
+        value={value} 
+        onChange={e => onChange(e.target.value)} 
+        className={cn(baseClasses, "w-[130px]")} 
+      />
+    );
+  }
+
+  if (type === 'biweekly') {
+    const [y, m, q] = value.split('-');
+    const monthVal = y && m ? `${y}-${m}` : '';
+    const qVal = q || 'Q1';
+    
+    return (
+      <div className="flex items-center gap-1">
+        <input 
+          type="month" 
+          value={monthVal} 
+          onChange={e => {
+            const newVal = e.target.value;
+            if (newVal) onChange(`${newVal}-${qVal}`);
+          }} 
+          className={cn(baseClasses, "w-[110px]")} 
+        />
+        <select 
+          value={qVal}
+          onChange={e => onChange(`${monthVal}-${e.target.value}`)}
+          className={cn(baseClasses, "w-12 px-1 text-center cursor-pointer")}
+        >
+          <option value="Q1">Q1</option>
+          <option value="Q2">Q2</option>
+        </select>
+      </div>
+    );
+  }
+  
+  return null;
+};
+
 export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
   const now = new Date().toISOString();
+  const [salesPeriodType, setSalesPeriodType] = useState<PeriodKey>('monthly');
+  const [salesPeriodValue, setSalesPeriodValue] = useState<string>(getDefaultPeriodValue('monthly'));
+  
+  const [pipelinePeriodType, setPipelinePeriodType] = useState<PeriodKey>('monthly');
+  const [pipelinePeriodValue, setPipelinePeriodValue] = useState<string>(getDefaultPeriodValue('monthly'));
+  
+  // Estado controlado para los dropdowns de periodo
+  const [openDropdown, setOpenDropdown] = useState<'pipeline' | 'sales' | null>(null);
+  const pipelineRef = useRef<HTMLDivElement>(null);
+  const salesRef = useRef<HTMLDivElement>(null);
+
+  // Efecto para cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        pipelineRef.current && !pipelineRef.current.contains(target) &&
+        salesRef.current && !salesRef.current.contains(target)
+      ) {
+        setOpenDropdown(null);
+      }
+    };
+
+    if (openDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [openDropdown]);
   
   const activeLeads = useMemo(() => 
     leads.filter(l => !l.is_archived && l.stage !== 'Cierre'), 
@@ -44,17 +217,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
     leads.filter(l => !l.is_archived), 
   [leads]);
 
+  // 🔒 VALOR PIPELINE (con periodo calendario)
+  const filteredActiveLeadsForPipeline = useMemo(() => {
+    return activeLeads.filter(l => {
+      const refDate = l.created_at || l.stage_entry_timestamp || l.last_activity;
+      return isDateInPeriod(refDate, pipelinePeriodType, pipelinePeriodValue);
+    });
+  }, [activeLeads, pipelinePeriodType, pipelinePeriodValue]);
+
   const totalPipelineValue = useMemo(() => 
-    activeLeads.reduce((sum, l) => sum + (l.budget || 0), 0), 
-  [activeLeads]);
+    filteredActiveLeadsForPipeline.reduce((sum, l) => sum + (l.budget || 0), 0), 
+  [filteredActiveLeadsForPipeline]);
   
+  // 🔒 VALOR VENTA CERRADA (con periodo calendario)
+  const filteredClosedLeads = useMemo(() => {
+    return closedLeads.filter(l => {
+      const refDate = l.signed_at || l.last_activity;
+      return isDateInPeriod(refDate, salesPeriodType, salesPeriodValue);
+    });
+  }, [closedLeads, salesPeriodType, salesPeriodValue]);
+
   const closedValue = useMemo(() => 
-    closedLeads.reduce((sum, l) => sum + (l.monto_anticipo_real || l.budget || 0), 0), 
-  [closedLeads]);
+    filteredClosedLeads.reduce((sum, l) => sum + (l.monto_anticipo_real || l.budget || 0), 0), 
+  [filteredClosedLeads]);
   
   const weightedForecast = useMemo(() => 
-    allNonArchived.reduce((sum, l) => sum + ((l.budget || 0) * (STAGE_WEIGHTS[l.stage] || 0)), 0), 
-  [allNonArchived]);
+    // Ajuste lógico: El pronóstico ponderado debe reflejar el MISMO periodo que el Valor Pipeline
+    // Para ello, operamos sobre el set de leads ya filtrados por la ventana de tiempo
+    filteredActiveLeadsForPipeline.reduce((sum, l) => sum + ((l.budget || 0) * (STAGE_WEIGHTS[l.stage] || 0)), 0), 
+  [filteredActiveLeadsForPipeline]);
   
   const priorityLeads = useMemo(() => 
     activeLeads.filter(l => l.is_priority), 
@@ -138,7 +329,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
     { 
       label: 'Valor Pipeline', 
       value: formatCurrency(totalPipelineValue), 
-      sub: `Ponderado: ${formatCurrency(weightedForecast)}`,
+      sub: `Ponderado: ${formatCurrency(weightedForecast)} • ${filteredActiveLeadsForPipeline.length} leads`,
+      periodKey: 'pipeline' as const,
+      periodType: pipelinePeriodType,
+      periodValue: pipelinePeriodValue,
+      setPeriodType: setPipelinePeriodType,
+      setPeriodValue: setPipelinePeriodValue,
       icon: TrendingUp, 
       color: 'text-emerald-600', 
       bg: 'bg-emerald-50' 
@@ -146,7 +342,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
     { 
       label: 'Venta Cerrada', 
       value: formatCurrency(closedValue), 
-      sub: `${closedLeads.length} contrato${closedLeads.length === 1 ? '' : 's'}`,
+      sub: `${filteredClosedLeads.length} contrato${filteredClosedLeads.length === 1 ? '' : 's'}`,
+      periodKey: 'sales' as const,
+      periodType: salesPeriodType,
+      periodValue: salesPeriodValue,
+      setPeriodType: setSalesPeriodType,
+      setPeriodValue: setSalesPeriodValue,
       icon: CheckCircle2, 
       color: 'text-indigo-600', 
       bg: 'bg-indigo-50' 
@@ -177,15 +378,116 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow"
+            className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow relative"
           >
             <div className="flex items-start justify-between">
               <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl`}>
                 <stat.icon size={20} />
               </div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">
-                {stat.sub}
-              </span>
+              <div className="flex flex-col items-end gap-1.5">
+                {stat.periodKey && (
+                  <div className="flex items-center gap-1.5 relative z-20">
+                    <PeriodValueInput
+                      type={stat.periodType}
+                      value={stat.periodValue}
+                      onChange={stat.setPeriodValue}
+                      color={stat.periodKey === 'sales' ? 'indigo' : 'emerald'}
+                    />
+                    <div ref={stat.periodKey === 'pipeline' ? pipelineRef : salesRef} className="relative">
+                      <button
+                        onClick={() => setOpenDropdown(openDropdown === stat.periodKey ? null : stat.periodKey)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-2.5 h-6 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all duration-200",
+                          stat.periodKey === 'pipeline' 
+                            ? "bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 shadow-sm"
+                            : "bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-200 shadow-sm"
+                        )}
+                      >
+                        <CalendarDays size={11} />
+                        <span>{PERIOD_LABELS[stat.periodType]}</span>
+                        <motion.div
+                          animate={{ rotate: openDropdown === stat.periodKey ? 180 : 0 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        >
+                          <ChevronDown size={11} className="shrink-0" />
+                        </motion.div>
+                      </button>
+
+                      <AnimatePresence>
+                        {openDropdown === stat.periodKey && (
+                          <>
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="fixed inset-0 z-40 -mx-5 -my-5" 
+                              onClick={() => setOpenDropdown(null)}
+                            />
+                            <motion.div
+                              initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                              className={cn(
+                                "absolute right-0 z-50 mt-2 w-44 bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden p-1"
+                              )}
+                            >
+                              {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((key, i) => {
+                                const isSelected = stat.periodType === key;
+                                
+                                return (
+                                  <motion.button
+                                    key={key}
+                                    initial={{ opacity: 0, x: -5 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: i * 0.03 }}
+                                    onClick={() => {
+                                      stat.setPeriodType(key);
+                                      stat.setPeriodValue(getDefaultPeriodValue(key));
+                                      setOpenDropdown(null);
+                                    }}
+                                    className={cn(
+                                      "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all duration-150 group my-0.5",
+                                      isSelected 
+                                        ? stat.periodKey === 'pipeline'
+                                          ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100"
+                                          : "bg-indigo-50 text-indigo-800 ring-1 ring-indigo-100"
+                                        : "text-slate-600 hover:bg-slate-50"
+                                    )}
+                                  >
+                                    <span className="flex flex-col items-start">
+                                      <span>{PERIOD_LABELS[key]}</span>
+                                      <span className="text-[9px] font-medium opacity-60 uppercase tracking-tight">
+                                        {PERIOD_DESC[key]}
+                                      </span>
+                                    </span>
+                                    {isSelected && (
+                                      <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: "spring", stiffness: 500 }}
+                                        className={cn(
+                                          "w-5 h-5 rounded-lg flex items-center justify-center",
+                                          stat.periodKey === 'pipeline' ? "bg-emerald-500 text-white" : "bg-indigo-500 text-white"
+                                        )}
+                                      >
+                                        <Check size={12} />
+                                      </motion.div>
+                                    )}
+                                  </motion.button>
+                                );
+                              })}
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                )}
+                <span className="text-[9px] font-bold text-slate-400 uppercase text-right max-w-[180px] leading-tight">
+                  {stat.sub}
+                </span>
+              </div>
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">{stat.label}</p>
