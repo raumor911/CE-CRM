@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Calendar, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Lead, Sentiment } from '../../types';
+import { Lead } from '../../types';
 
 interface LeadEditFormProps {
   onClose: () => void;
@@ -16,8 +16,7 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
     email: lead.email || '',
     phone: lead.phone || '',
     budget: lead.budget?.toString() || '0',
-    category: lead.category,
-    sentiment_label: lead.sentiment_label
+    category: lead.category
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,8 +27,7 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
       email: lead.email || '',
       phone: lead.phone || '',
       budget: lead.budget?.toString() || '0',
-      category: lead.category,
-      sentiment_label: lead.sentiment_label
+      category: lead.category
     });
   }, [lead]);
 
@@ -44,7 +42,6 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
       phone: formData.phone,
       budget: Number(formData.budget),
       category: formData.category,
-      sentiment_label: formData.sentiment_label,
       last_activity: new Date().toISOString()
     };
 
@@ -101,10 +98,9 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
 
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                  Nombre del Proyecto <span className="text-rose-500">*</span>
+                  Nombre del Proyecto
                 </label>
                 <input
-                  required
                   type="text"
                   className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   value={formData.project_name}
@@ -115,10 +111,9 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                    Nombre del Lead <span className="text-rose-500">*</span>
+                    Nombre del Lead
                   </label>
                   <input
-                    required
                     type="text"
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.lead_name}
@@ -127,10 +122,9 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                    Email <span className="text-rose-500">*</span>
+                    Email
                   </label>
                   <input
-                    required
                     type="email"
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.email}
@@ -142,10 +136,9 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                    Teléfono <span className="text-rose-500">*</span>
+                    Teléfono
                   </label>
                   <input
-                    required
                     type="tel"
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.phone}
@@ -154,12 +147,11 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                    Presupuesto (MXN) <span className="text-rose-500">*</span>
+                    Presupuesto (MXN)
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">$</span>
                     <input
-                      required
                       type="number"
                       min="0"
                       step="0.01"
@@ -184,26 +176,6 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
                   <option value="Renta Contenedor">Renta Contenedor</option>
                   <option value="Renta Oficina 20 ft">Renta Oficina 20 ft</option>
                 </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Sentimiento (Manual)</label>
-                <div className="flex gap-2">
-                  {(['Entusiasta', 'Dudoso', 'Preocupado'] as Sentiment[]).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, sentiment_label: s })}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all border ${
-                        formData.sentiment_label === s
-                          ? 'bg-zinc-900 text-white border-transparent'
-                          : 'bg-zinc-50 text-zinc-500 border-zinc-200 hover:bg-zinc-100'
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <button
