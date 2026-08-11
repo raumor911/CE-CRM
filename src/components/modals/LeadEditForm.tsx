@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Loader2, Calendar, Clock, Image as ImageIcon } from 'lucide-react';
+import { X, Loader2, Calendar, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lead, Sentiment } from '../../types';
 
@@ -17,10 +17,8 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
     phone: lead.phone || '',
     budget: lead.budget?.toString() || '0',
     category: lead.category,
-    sentiment_label: lead.sentiment_label,
-    main_image_url: lead.main_image_url || ''
+    sentiment_label: lead.sentiment_label
   });
-  const [newImage, setNewImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -31,10 +29,8 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
       phone: lead.phone || '',
       budget: lead.budget?.toString() || '0',
       category: lead.category,
-      sentiment_label: lead.sentiment_label,
-      main_image_url: lead.main_image_url || ''
+      sentiment_label: lead.sentiment_label
     });
-    setNewImage(null);
   }, [lead]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,21 +47,6 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
       sentiment_label: formData.sentiment_label,
       last_activity: new Date().toISOString()
     };
-
-    // Price history logic
-    if (Number(formData.budget) !== lead.budget) {
-      const historyEntry = {
-        date: new Date().toISOString(),
-        amount: Number(formData.budget)
-      };
-      updates.price_history = [...(lead.price_history || []), historyEntry];
-    }
-
-    // Image upload simulation
-    if (newImage) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      updates.main_image_url = URL.createObjectURL(newImage);
-    }
 
     try {
       await onUpdate(lead.id, updates);
@@ -222,31 +203,6 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
                       {s}
                     </button>
                   ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Imagen del Proyecto</label>
-                <div className="flex items-center gap-4">
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 flex-shrink-0">
-                    {newImage ? (
-                      <img src={URL.createObjectURL(newImage)} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={formData.main_image_url} alt="Current" className="w-full h-full object-cover" />
-                    )}
-                  </div>
-                  <div className="flex-1 relative group">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      onChange={e => setNewImage(e.target.files?.[0] || null)}
-                    />
-                    <div className="border-2 border-dashed border-zinc-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group-hover:border-indigo-500 transition-colors">
-                      <Upload size={18} className="text-zinc-400 group-hover:text-indigo-500" />
-                      <p className="text-[10px] font-bold text-zinc-500 uppercase">Reemplazar Imagen</p>
-                    </div>
-                  </div>
                 </div>
               </div>
 
