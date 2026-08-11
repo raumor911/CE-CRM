@@ -139,7 +139,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-black tracking-tight uppercase text-slate-900">
                 {currentView === 'pipeline' ? 'Pipeline Kanban' : 
-                 currentView === 'dashboard' ? 'Dashboard' :
+                 currentView === 'dashboard' ? '' :
                  currentView === 'directory' ? 'Directorio' : 'Ajustes'}
               </h1>
               {currentView === 'pipeline' && (
@@ -154,13 +154,6 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
-                <Search size={20} />
-              </button>
-              <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
-                <Bell size={20} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-status-critical rounded-full border-2 border-white"></span>
-              </button>
             </div>
           </div>
         </header>
