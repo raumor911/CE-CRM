@@ -3,6 +3,7 @@ import { LayoutDashboard, Search, Bell, Menu, Plus, CheckCircle2, LogOut, User a
 import { KanbanBoard } from './components/KanbanBoard';
 import { DashboardView } from './components/DashboardView';
 import { DirectoryView } from './components/DirectoryView';
+import { RentalsView } from './components/RentalsView';
 import { SettingsView } from './components/SettingsView';
 import { Sidebar } from './components/Sidebar';
 import { NewLeadForm } from './components/modals/NewLeadForm';
@@ -24,7 +25,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
-  const [currentView, setCurrentView] = useState<'dashboard' | 'pipeline' | 'directory' | 'settings'>('pipeline');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'settings'>('pipeline');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -140,7 +141,8 @@ export default function App() {
               <h1 className="text-xl font-black tracking-tight uppercase text-slate-900">
                 {currentView === 'pipeline' ? 'Pipeline Kanban' : 
                  currentView === 'dashboard' ? '' :
-                 currentView === 'directory' ? 'Directorio' : 'Ajustes'}
+                 currentView === 'directory' ? 'Directorio' :
+                 currentView === 'rentals' ? 'Rentas' : 'Ajustes'}
               </h1>
               {currentView === 'pipeline' && (
                 <button 
@@ -189,6 +191,7 @@ export default function App() {
                     onUpdateLead={handleUpdateLead}
                   />
                 )}
+                {currentView === 'rentals' && <RentalsView />}
                 {currentView === 'settings' && <SettingsView />}
               </motion.div>
             </AnimatePresence>

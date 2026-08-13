@@ -45,6 +45,52 @@ export interface LeadDocument {
   created_at: string;
 }
 
+export interface Rental {
+  id: string;
+  client_name: string;
+  phone: string | null;
+  project_location: string | null;
+  start_date: string;
+  contractual_end_date: string | null;
+  actual_end_date: string | null;
+  rental_status: 'active' | 'completed' | 'cancelled';
+  payment_status: 'current' | 'pending_confirmation';
+  lead_id: string | null;
+  contract_link: string | null;
+  receipts_link: string | null;
+  notes: string | null;
+  historical_missing_end_date: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RentalItem {
+  id: string;
+  rental_id: string;
+  equipment_description: string;
+  quantity: number;
+  subtotal_monthly: number;
+  tax_monthly: number;
+  monthly_total: number;
+  return_freight_cost: number | null;
+  notes: string | null;
+  source_row_number: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RentalActivity {
+  id: string;
+  rental_id: string;
+  activity_type: string;
+  description: string;
+  previous_data: any | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface LeadActivity {
   id: string;
   lead_id: string;

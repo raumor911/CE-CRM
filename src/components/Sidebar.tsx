@@ -4,6 +4,7 @@ import {
   Kanban, 
   Table, 
   Settings, 
+  Key,
   ChevronLeft, 
   ChevronRight,
   LogOut,
@@ -14,8 +15,8 @@ import { useAuth } from '../context/AuthContext';
 import { BrandConfig } from '../config/branding';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'pipeline' | 'directory' | 'settings';
-  onViewChange: (view: 'dashboard' | 'pipeline' | 'directory' | 'settings') => void;
+  currentView: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'settings';
+  onViewChange: (view: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'settings') => void;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
 }
@@ -32,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'pipeline', label: 'Pipeline', icon: Kanban },
     { id: 'directory', label: 'Directorio', icon: Table },
+    { id: 'rentals', label: 'Rentas', icon: Key },
     { id: 'settings', label: 'Ajustes', icon: Settings },
   ] as const;
 
