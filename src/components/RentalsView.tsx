@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRentals, RentalWithItems } from '../hooks/useRentals';
+import { RentalActivity } from '../types';
+import { RentalFormModal } from './modals/RentalFormModal';
 import { 
   Building2, 
   Calendar, 
@@ -19,12 +21,16 @@ import {
   XCircle,
   CalendarClock,
   Clock,
-  Phone
+  Phone,
+  Plus,
+  History,
+  CheckSquare,
+  Trash2
 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 import { format, differenceInDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 // Date utility to avoid timezone shifts
 const parseLocalDate = (dateStr?: string | null): Date | null => {
@@ -48,10 +54,49 @@ const formatShortDate = (dateStr?: string | null): string => {
 };
 
 export const RentalsView: React.FC = () => {
-  const { rentals, loading, fetchRentals } = useRentals();
+  const { 
+    rentals, 
+    loading, 
+    fetchRentals,
+    getRentalActivities,
+    addRentalActivity,
+    changePaymentStatus,
+    renewRental,
+    completeRental,
+    cancelRental,
+    createRental,
+    updateRental,
+    addRentalItem,
+    updateRentalItem,
+    removeRentalItem
+  } = useRentals();
   const [selectedRentalId, setSelectedRentalId] = useState<string | null>(null);
   const [attentionTab, setAttentionTab] = useState<'todas' | 'criticas' | 'proximas'>('todas');
   
+  // Activities
+  const [activities, setActivities] = useState<RentalActivity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+
+  // Form Modal
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingRentalId, setEditingRentalId] = useState<string | null>(null);
+
+  // Action Modals
+  const [renewModalOpen, setRenewModalOpen] = useState(false);
+  const [renewDate, setRenewDate] = useState('');
+  
+  const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  const [completeReason, setCompleteReason] = useState('');
+  
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  
+  const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
+  const [followUpNotes, setFollowUpNotes] = useState('');
+
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -304,6 +349,17 @@ export const RentalsView: React.FC = () => {
     }
   }, [filteredRentals, selectedRentalId]);
 
+  useEffect(() => {
+    if (selectedRentalId) {
+      setLoadingActivities(true);
+      getRentalActivities(selectedRentalId)
+        .then(data => setActivities(data))
+        .finally(() => setLoadingActivities(false));
+    } else {
+      setActivities([]);
+    }
+  }, [selectedRentalId, getRentalActivities]);
+
   const calculateTotal = (rental: RentalWithItems) => {
     if (rental.monthly_amount_total) return Number(rental.monthly_amount_total);
     if (!rental.items || rental.items.length === 0) return 0;
@@ -345,9 +401,19 @@ export const RentalsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-auto bg-gray-50 min-h-screen font-sans text-gray-900">
+    <div className="flex-1 overflow-auto bg-gray-50 min-h-screen font-sans text-gray-900 relative">
       <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
         
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Rentas</h1>
+          <button 
+            onClick={() => { setEditingRentalId(null); setIsFormOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Nueva Renta
+          </button>
+        </div>
+
         {/* Top KPI Bar - Grid 5 columnas */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <KpiCard title="Rentas activas" value={activeCount.toString()} icon={<Building2 className="w-3.5 h-3.5 text-blue-600" />} color="blue" />
@@ -662,7 +728,9 @@ export const RentalsView: React.FC = () => {
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(selectedRental.status)}`}>
                         {getStatusLabel(selectedRental.status)}
                       </span>
-                      <button className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Editar">
+                      <button 
+                        onClick={() => { setEditingRentalId(selectedRental.id); setIsFormOpen(true); }}
+                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Editar">
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -695,19 +763,47 @@ export const RentalsView: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-gray-500">Pago</p>
-                        <p className="font-medium text-gray-900">{getPaymentStatusLabel(selectedRental.payment_status)}</p>
+                        <button 
+                          onClick={() => changePaymentStatus(selectedRental.id, selectedRental.payment_status === 'current' ? 'pending_confirmation' : 'current')}
+                          className="font-medium text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-1"
+                          title="Click para cambiar estado"
+                        >
+                          {getPaymentStatusLabel(selectedRental.payment_status)}
+                        </button>
                       </div>
                     </div>
 
                     {/* Equipos */}
                     <div>
-                      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Equipos asignados</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Equipos asignados</p>
+                        <button 
+                          onClick={() => { setEditingItem(null); setItemModalOpen(true); }}
+                          className="text-[10px] text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" /> Agregar
+                        </button>
+                      </div>
                       {selectedRental.items && selectedRental.items.length > 0 ? (
                         <div className="space-y-2">
                           {selectedRental.items.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center bg-gray-50 px-2 py-1.5 rounded border border-gray-100">
+                            <div key={idx} className="flex justify-between items-center bg-gray-50 px-2 py-1.5 rounded border border-gray-100 group">
                               <span className="text-xs font-medium text-gray-700 truncate">{item.equipment_description || 'Equipo'}</span>
-                              <span className="text-[10px] text-gray-500 bg-white px-1.5 rounded border border-gray-200">Cant: {item.quantity}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-gray-500 bg-white px-1.5 rounded border border-gray-200">Cant: {item.quantity}</span>
+                                <div className="hidden group-hover:flex items-center gap-1">
+                                  <button onClick={() => { setEditingItem(item); setItemModalOpen(true); }} className="p-1 text-gray-400 hover:text-blue-600 rounded">
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                  <button onClick={() => {
+                                    if(window.confirm('¿Seguro que deseas eliminar este equipo?')) {
+                                      removeRentalItem(item.id, selectedRental.id);
+                                    }
+                                  }} className="p-1 text-gray-400 hover:text-red-600 rounded">
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -727,12 +823,21 @@ export const RentalsView: React.FC = () => {
                       )}
                       
                       {selectedRental.status === 'active' && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <button className="py-1.5 bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 text-[11px] font-medium rounded-md transition-colors">
+                        <div className="grid grid-cols-3 gap-2">
+                          <button 
+                            onClick={() => setRenewModalOpen(true)}
+                            className="py-1.5 bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 text-[11px] font-medium rounded-md transition-colors">
                             Renovar
                           </button>
-                          <button className="py-1.5 bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 text-[11px] font-medium rounded-md transition-colors">
-                            <XCircle className="w-3.5 h-3.5 inline mr-1" /> Finalizar
+                          <button 
+                            onClick={() => setCompleteModalOpen(true)}
+                            className="py-1.5 bg-green-50 text-green-700 border border-green-100 hover:bg-green-100 text-[11px] font-medium rounded-md transition-colors">
+                            <CheckSquare className="w-3.5 h-3.5 inline mr-1" /> Finalizar
+                          </button>
+                          <button 
+                            onClick={() => setCancelModalOpen(true)}
+                            className="py-1.5 bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 text-[11px] font-medium rounded-md transition-colors">
+                            <XCircle className="w-3.5 h-3.5 inline mr-1" /> Cancelar
                           </button>
                         </div>
                       )}
@@ -757,6 +862,37 @@ export const RentalsView: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Historial de Actividad */}
+                    <div className="border-t border-gray-100 pt-4 pb-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <History className="w-3.5 h-3.5" /> Historial de Actividad
+                        </p>
+                        <button 
+                          onClick={() => setFollowUpModalOpen(true)}
+                          className="text-[10px] text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" /> Registrar
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {loadingActivities ? (
+                          <div className="text-center py-4 text-gray-400"><Clock className="w-4 h-4 animate-spin mx-auto" /></div>
+                        ) : activities.length === 0 ? (
+                          <p className="text-[10px] text-gray-500 italic text-center py-2">Sin actividad reciente</p>
+                        ) : (
+                          activities.map(activity => (
+                            <div key={activity.id} className="relative pl-3 border-l-2 border-gray-100">
+                              <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-blue-400 ring-2 ring-white"></div>
+                              <p className="text-[10px] font-semibold text-gray-900">{activity.activity_type}</p>
+                              <p className="text-[10px] text-gray-600 mt-0.5 leading-snug">{activity.description}</p>
+                              <p className="text-[9px] text-gray-400 mt-1">{formatShortDate(activity.created_at)}</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
                   </div>
                 </>
               ) : (
@@ -770,6 +906,214 @@ export const RentalsView: React.FC = () => {
 
         </div>
       </div>
+
+      {/* Modals */}
+      <RentalFormModal 
+        isOpen={isFormOpen} 
+        onClose={() => setIsFormOpen(false)} 
+        initialData={editingRentalId ? rentals.find(r => r.id === editingRentalId) || null : null}
+        initialItems={editingRentalId ? rentals.find(r => r.id === editingRentalId)?.items || [] : []}
+        onSubmit={async (rentalData, itemsData) => {
+          if (editingRentalId) {
+            await updateRental(editingRentalId, rentalData);
+            // Updating items can be tricky if we don't have item IDs.
+            // In RentalFormModal, we didn't support updating existing items with ID.
+            // But since the instruction says "En la vista de equipos (RentalDetailModal o RentalsView), permitir agregar, editar y eliminar equipos llamando a addRentalItem, updateRentalItem, removeRentalItem", we might not need to update items in the RentalFormModal.
+            // Actually, if we just pass the items, we can handle it if we want, but let's just update the main rental data here. 
+            // Wait, for full edit, maybe we don't update items in RentalFormModal? The instruction says:
+            // "6. En la vista de equipos (RentalDetailModal o RentalsView), permitir agregar, editar y eliminar equipos llamando a addRentalItem, updateRentalItem, removeRentalItem."
+            // So we'll handle item management in the detail view. 
+          } else {
+            await createRental(rentalData as any, itemsData as any);
+          }
+        }}
+      />
+
+      {/* Action Modals */}
+      <AnimatePresence>
+        {renewModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setRenewModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4">Renovar Contrato</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Nueva fecha de vencimiento</label>
+                  <input type="date" value={renewDate} onChange={e => setRenewDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button onClick={() => setRenewModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
+                  <button 
+                    onClick={async () => {
+                      if (renewDate && selectedRentalId) {
+                        await renewRental(selectedRentalId, renewDate);
+                        setRenewModalOpen(false);
+                        setRenewDate('');
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Confirmar Renovación
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {completeModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setCompleteModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4">Finalizar Renta</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Motivo / Notas (Opcional)</label>
+                  <textarea value={completeReason} onChange={e => setCompleteReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-24 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Todo devuelto en orden..."></textarea>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button onClick={() => setCompleteModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
+                  <button 
+                    onClick={async () => {
+                      if (selectedRentalId) {
+                        await completeRental(selectedRentalId, completeReason);
+                        setCompleteModalOpen(false);
+                        setCompleteReason('');
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    Confirmar Finalización
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {cancelModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setCancelModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4 text-red-600">Cancelar Contrato</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Motivo de cancelación</label>
+                  <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-24 focus:ring-2 focus:ring-red-500 outline-none" placeholder="Falta de pago, problema con el cliente..."></textarea>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button onClick={() => setCancelModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Volver</button>
+                  <button 
+                    onClick={async () => {
+                      if (cancelReason && selectedRentalId) {
+                        await cancelRental(selectedRentalId, cancelReason);
+                        setCancelModalOpen(false);
+                        setCancelReason('');
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    disabled={!cancelReason}
+                  >
+                    Confirmar Cancelación
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {followUpModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setFollowUpModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4">Registrar Seguimiento</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Notas de seguimiento</label>
+                  <textarea value={followUpNotes} onChange={e => setFollowUpNotes(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-24 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Se contactó al cliente por WhatsApp..."></textarea>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button onClick={() => setFollowUpModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
+                  <button 
+                    onClick={async () => {
+                      if (followUpNotes && selectedRentalId) {
+                        await addRentalActivity(selectedRentalId, 'Seguimiento', followUpNotes);
+                        setFollowUpModalOpen(false);
+                        setFollowUpNotes('');
+                        // Reload activities
+                        const newActs = await getRentalActivities(selectedRentalId);
+                        setActivities(newActs);
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    disabled={!followUpNotes}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {itemModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setItemModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4">{editingItem ? 'Editar Equipo' : 'Agregar Equipo'}</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const desc = (form.elements.namedItem('desc') as HTMLInputElement).value;
+                const qty = Number((form.elements.namedItem('qty') as HTMLInputElement).value);
+                const subtotal = Number((form.elements.namedItem('subtotal') as HTMLInputElement).value);
+                
+                const totalSub = subtotal * qty;
+                const tax = totalSub * 0.16;
+                const total = totalSub + tax;
+
+                const itemData = {
+                  equipment_description: desc,
+                  quantity: qty,
+                  subtotal_monthly: subtotal,
+                  tax_monthly: Number(tax.toFixed(2)),
+                  monthly_total: Number(total.toFixed(2))
+                };
+
+                if (editingItem && selectedRentalId) {
+                  await updateRentalItem(editingItem.id, selectedRentalId, itemData as any);
+                } else if (selectedRentalId) {
+                  await addRentalItem(selectedRentalId, itemData as any);
+                }
+                setItemModalOpen(false);
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+                    <input name="desc" required defaultValue={editingItem?.equipment_description} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
+                      <input name="qty" type="number" required min="1" defaultValue={editingItem?.quantity || 1} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Subtotal (Unitario)</label>
+                      <input name="subtotal" type="number" step="0.01" required min="0" defaultValue={editingItem?.subtotal_monthly || 0} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 mt-6">
+                    <button type="button" onClick={() => { setItemModalOpen(false); setEditingItem(null); }} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
+                    <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                      Guardar
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

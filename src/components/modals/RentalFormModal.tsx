@@ -1,38 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Rental, RentalItem } from '../../types';
 
-interface RentalFormModalProps {
+export interface RentalFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (rentalData: Partial<Rental>, itemsData: Partial<RentalItem>[]) => Promise<void>;
+  initialData?: Rental | null;
+  initialItems?: RentalItem[];
 }
 
-export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClose, onSubmit }) => {
+export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClose, onSubmit, initialData, initialItems }) => {
   // Rental basic info
   const [formData, setFormData] = useState({
-    customer_name: '',
-    customer_phone: '',
-    project_name: '',
-    location: '',
-    start_date: new Date().toISOString().split('T')[0],
-    contractual_end_date: '',
+    customer_name: initialData?.customer_name || '',
+    customer_phone: initialData?.customer_phone || '',
+    project_name: initialData?.project_name || '',
+    location: initialData?.location || '',
+    start_date: initialData?.start_date ? initialData.start_date.split('T')[0] : new Date().toISOString().split('T')[0],
+    contractual_end_date: initialData?.contractual_end_date ? initialData.contractual_end_date.split('T')[0] : '',
   });
 
   // Dynamic items
-  const [items, setItems] = useState<Partial<RentalItem>[]>([
-    {
-      equipment_description: '',
-      quantity: 1,
-      subtotal_monthly: 0,
-      tax_monthly: 0,
-      monthly_total: 0,
-    }
-  ]);
+  const [items, setItems] = useState<Partial<RentalItem>[]>(
+    initialItems && initialItems.length > 0 
+      ? initialItems 
+      : [{
+          equipment_description: '',
+          quantity: 1,
+          subtotal_monthly: 0,
+          tax_monthly: 0,
+          monthly_total: 0,
+        }]
+  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        customer_name: initialData?.customer_name || '',
+        customer_phone: initialData?.customer_phone || '',
+        project_name: initialData?.project_name || '',
+        location: initialData?.location || '',
+        start_date: initialData?.start_date ? initialData.start_date.split('T')[0] : new Date().toISOString().split('T')[0],
+        contractual_end_date: initialData?.contractual_end_date ? initialData.contractual_end_date.split('T')[0] : '',
+      });
+      setItems(
+        initialItems && initialItems.length > 0 
+          ? initialItems 
+          : [{
+              equipment_description: '',
+              quantity: 1,
+              subtotal_monthly: 0,
+              tax_monthly: 0,
+              monthly_total: 0,
+            }]
+      );
+      setError(null);
+    }
+  }, [isOpen, initialData, initialItems]);
 
   const handleItemChange = (index: number, field: keyof RentalItem, value: any) => {
     const newItems = [...items];
@@ -110,31 +139,32 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        />
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-        >
-          {/* Header */}
-          <div className="p-6 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20 shrink-0">
-            <div>
-              <h2 className="text-xl font-bold text-zinc-900">Nueva Renta</h2>
-              <p className="text-xs text-zinc-500 font-medium">Registra los datos del contrato y equipos.</p>
-            </div>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20 shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-zinc-900">
+                  {initialData ? 'Editar Renta' : 'Nueva Renta'}
+                </h2>
+                <p className="text-xs text-zinc-500 font-medium">Registra los datos del contrato y equipos.</p>
+              </div>
             <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
               <X size={20} />
             </button>
@@ -341,12 +371,13 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                   Guardando...
                 </>
               ) : (
-                'Crear Renta'
+                initialData ? 'Guardar Cambios' : 'Crear Renta'
               )}
             </button>
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 };
