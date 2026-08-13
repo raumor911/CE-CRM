@@ -25,7 +25,7 @@ export const useRentals = () => {
       if (fetchError) throw fetchError;
 
       // Mapeamos 'rental_items' al campo 'items' requerido
-      const formattedData: RentalWithItems[] = (data || []).map((rental: any) => ({
+      const formattedData: RentalWithItems[] = (data || []).map((rental) => ({
         ...rental,
         items: rental.rental_items || [],
       }));

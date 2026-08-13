@@ -36,7 +36,7 @@ export const RentalsView: React.FC = () => {
     let totalVAT = 0;
 
     rentals.forEach(rental => {
-      if (rental.rental_status === 'active') {
+      if (rental.status === 'active') {
         active++;
         
         // Sumar totales mensuales (ya incluye IVA si es monthly_total)
@@ -240,9 +240,9 @@ export const RentalsView: React.FC = () => {
                       className="hover:bg-gray-50/50 transition-colors group"
                     >
                       <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{rental.client_name}</div>
-                        <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]" title={rental.project_location || ''}>
-                          {rental.project_location || 'Sin ubicación'}
+                        <div className="font-medium text-gray-900">{rental.customer_name}</div>
+                        <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]" title={[rental.project_name, rental.location].filter(Boolean).join(' - ') || ''}>
+                          {[rental.project_name, rental.location].filter(Boolean).join(' - ') || 'Sin ubicación'}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center text-gray-600 font-medium">
@@ -268,8 +268,8 @@ export const RentalsView: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(rental.rental_status)}`}>
-                          {getStatusLabel(rental.rental_status)}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(rental.status)}`}>
+                          {getStatusLabel(rental.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">

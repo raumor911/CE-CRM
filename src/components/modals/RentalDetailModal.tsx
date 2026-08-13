@@ -57,7 +57,7 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
     }
   };
 
-  const statusConfig = getStatusConfig(rental.rental_status);
+  const statusConfig = getStatusConfig(rental.status);
   const paymentConfig = getPaymentConfig(rental.payment_status);
 
   return (
@@ -81,7 +81,7 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
           <div className="p-6 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20 shrink-0">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h2 className="text-xl font-bold text-zinc-900">{rental.client_name}</h2>
+                <h2 className="text-xl font-bold text-zinc-900">{rental.customer_name}</h2>
                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${statusConfig.bg} ${statusConfig.text}`}>
                   {statusConfig.label}
                 </span>
@@ -108,9 +108,9 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
           <div className="overflow-y-auto flex-1 p-6 space-y-6">
             
             {/* Alertas */}
-            {(!rental.phone || isExpired) && (
+            {(!rental.customer_phone || isExpired) && (
               <div className="flex flex-col gap-2">
-                {!rental.phone && (
+                {!rental.customer_phone && (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-3">
                     <PhoneOff className="text-amber-500 shrink-0 mt-0.5" size={16} />
                     <p className="text-xs text-amber-700 font-medium">
@@ -118,7 +118,7 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
                     </p>
                   </div>
                 )}
-                {isExpired && rental.rental_status === 'active' && (
+                {isExpired && rental.status === 'active' && (
                   <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-start gap-3">
                     <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={16} />
                     <p className="text-xs text-rose-700 font-medium">
@@ -151,8 +151,8 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1">
                   <MapPin size={12} /> Ubicación
                 </span>
-                <p className="text-sm font-semibold text-zinc-900 truncate" title={rental.project_location || 'No especificada'}>
-                  {rental.project_location || 'No especificada'}
+                <p className="text-sm font-semibold text-zinc-900 truncate" title={[rental.project_name, rental.location].filter(Boolean).join(' - ') || 'No especificada'}>
+                  {[rental.project_name, rental.location].filter(Boolean).join(' - ') || 'No especificada'}
                 </p>
               </div>
             </div>
@@ -203,7 +203,7 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
           </div>
 
           {/* Footer - Actions */}
-          {rental.rental_status === 'active' && (
+          {rental.status === 'active' && (
             <div className="p-6 border-t border-zinc-100 bg-zinc-50 shrink-0 flex gap-4">
               <button
                 onClick={() => onCancelContract && onCancelContract(rental.id)}

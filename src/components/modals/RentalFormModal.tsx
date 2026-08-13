@@ -12,9 +12,10 @@ interface RentalFormModalProps {
 export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClose, onSubmit }) => {
   // Rental basic info
   const [formData, setFormData] = useState({
-    client_name: '',
-    phone: '',
-    project_location: '',
+    customer_name: '',
+    customer_phone: '',
+    project_name: '',
+    location: '',
     start_date: new Date().toISOString().split('T')[0],
     contractual_end_date: '',
   });
@@ -76,7 +77,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
     setError(null);
 
     // Validation
-    if (!formData.client_name || !formData.start_date) {
+    if (!formData.customer_name || !formData.start_date) {
       setError('Por favor, completa los campos obligatorios del cliente.');
       return;
     }
@@ -93,9 +94,10 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
       
       // Reset form
       setFormData({
-        client_name: '',
-        phone: '',
-        project_location: '',
+        customer_name: '',
+        customer_phone: '',
+        project_name: '',
+        location: '',
         start_date: new Date().toISOString().split('T')[0],
         contractual_end_date: '',
       });
@@ -169,8 +171,8 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                       type="text"
                       placeholder="Ej: Constructora ABC"
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      value={formData.client_name}
-                      onChange={e => setFormData({ ...formData, client_name: e.target.value })}
+                      value={formData.customer_name}
+                      onChange={e => setFormData({ ...formData, customer_name: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -181,23 +183,37 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                       type="tel"
                       placeholder="+52 55..."
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      value={formData.phone}
-                      onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                      value={formData.customer_phone}
+                      onChange={e => setFormData({ ...formData, customer_phone: e.target.value })}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-                    Ubicación del Proyecto
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Dirección o referencia"
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    value={formData.project_location}
-                    onChange={e => setFormData({ ...formData, project_location: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                      Nombre del Proyecto
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Obra Central"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      value={formData.project_name}
+                      onChange={e => setFormData({ ...formData, project_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                      Ubicación
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Dirección o referencia"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      value={formData.location}
+                      onChange={e => setFormData({ ...formData, location: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
