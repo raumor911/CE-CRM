@@ -25,12 +25,29 @@ import {
   Plus,
   History,
   CheckSquare,
-  Trash2
+  Trash2,
+  Loader2,
+  Link as LinkIcon
 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 import { format, differenceInDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
+
+export type RentalAlertType = 'expired' | 'expiring_soon' | 'expiring_15' | 'pending_payment' | 'missing_date' | 'missing_phone' | 'missing_contract';
+
+export interface RentalAlert {
+  id: string;
+  rentalId: string;
+  type: RentalAlertType;
+  client: string;
+  reason: string;
+  date: string;
+  updated: string;
+  action: string;
+  isCritical: boolean;
+  isUpcoming: boolean;
+}
 
 // Date utility to avoid timezone shifts
 const parseLocalDate = (dateStr?: string | null): Date | null => {
@@ -80,6 +97,10 @@ export const RentalsView: React.FC = () => {
   // Form Modal
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRentalId, setEditingRentalId] = useState<string | null>(null);
+  const [formInitialFocus, setFormInitialFocus] = useState<string | undefined>(undefined);
+
+  // Active Action State
+  const [activeActionId, setActiveActionId] = useState<string | null>(null);
 
   // Action Modals
   const [renewModalOpen, setRenewModalOpen] = useState(false);
@@ -93,6 +114,14 @@ export const RentalsView: React.FC = () => {
   
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpNotes, setFollowUpNotes] = useState('');
+
+  const [paymentValidationModalOpen, setPaymentValidationModalOpen] = useState(false);
+  
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
+
+  const [contractLinkModalOpen, setContractLinkModalOpen] = useState(false);
+  const [newContractLink, setNewContractLink] = useState('');
 
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -109,6 +138,36 @@ export const RentalsView: React.FC = () => {
   });
   const [tempFilters, setTempFilters] = useState(filters);
   
+  const handleSuggestedAction = (alert: RentalAlert) => {
+    setSelectedRentalId(alert.rentalId);
+    setActiveActionId(alert.id);
+    
+    setTimeout(() => {
+      switch (alert.type) {
+        case 'expired':
+        case 'expiring_soon':
+        case 'expiring_15':
+          setRenewModalOpen(true);
+          break;
+        case 'pending_payment':
+          setPaymentValidationModalOpen(true);
+          break;
+        case 'missing_date':
+          setEditingRentalId(alert.rentalId);
+          setFormInitialFocus('contractual_end_date');
+          setIsFormOpen(true);
+          break;
+        case 'missing_phone':
+          setPhoneModalOpen(true);
+          break;
+        case 'missing_contract':
+          setContractLinkModalOpen(true);
+          break;
+      }
+      setActiveActionId(null);
+    }, 150);
+  };
+
   const applyFilters = () => {
     setFilters(tempFilters);
     setIsFilterOpen(false);
@@ -145,7 +204,7 @@ export const RentalsView: React.FC = () => {
     let pendingPayments = 0;
     let totalVAT = 0;
 
-    const generatedAlerts: any[] = [];
+    const generatedAlerts: RentalAlert[] = [];
     const expirations: any[] = [];
 
     rentals.forEach(rental => {
@@ -167,7 +226,9 @@ export const RentalsView: React.FC = () => {
             if (diffDays < 0) {
               expired++;
               generatedAlerts.push({
+                id: rental.id + '_expired',
                 rentalId: rental.id,
+                type: 'expired',
                 client: rental.customer_name,
                 reason: 'Contrato vencido',
                 date: formatLocalDate(rental.contractual_end_date),
@@ -179,7 +240,9 @@ export const RentalsView: React.FC = () => {
             } else if (diffDays >= 0 && diffDays <= 7) {
               immediateExpiring++;
               generatedAlerts.push({
+                id: rental.id + '_expiring_soon',
                 rentalId: rental.id,
+                type: 'expiring_soon',
                 client: rental.customer_name,
                 reason: `Vence en ${diffDays} días`,
                 date: formatLocalDate(rental.contractual_end_date),
@@ -191,7 +254,9 @@ export const RentalsView: React.FC = () => {
             } else if (diffDays >= 8 && diffDays <= 15) {
               expiring15++;
               generatedAlerts.push({
+                id: rental.id + '_expiring_15',
                 rentalId: rental.id,
+                type: 'expiring_15',
                 client: rental.customer_name,
                 reason: `Vence en ${diffDays} días`,
                 date: formatLocalDate(rental.contractual_end_date),
@@ -218,7 +283,9 @@ export const RentalsView: React.FC = () => {
         if (rental.payment_status === 'pending_confirmation') {
           pendingPayments++;
           generatedAlerts.push({
+            id: rental.id + '_pending_payment',
             rentalId: rental.id,
+            type: 'pending_payment',
             client: rental.customer_name,
             reason: 'Pago por confirmar',
             date: '-',
@@ -231,7 +298,9 @@ export const RentalsView: React.FC = () => {
 
         if (rental.historical_missing_end_date) {
           generatedAlerts.push({
+            id: rental.id + '_missing_date',
             rentalId: rental.id,
+            type: 'missing_date',
             client: rental.customer_name,
             reason: 'Sin fecha contractual',
             date: '-',
@@ -244,7 +313,9 @@ export const RentalsView: React.FC = () => {
 
         if (!rental.customer_phone) {
           generatedAlerts.push({
+            id: rental.id + '_missing_phone',
             rentalId: rental.id,
+            type: 'missing_phone',
             client: rental.customer_name,
             reason: 'Teléfono ausente',
             date: '-',
@@ -257,7 +328,9 @@ export const RentalsView: React.FC = () => {
 
         if (!rental.contract_reference_url) {
           generatedAlerts.push({
+            id: rental.id + '_missing_contract',
             rentalId: rental.id,
+            type: 'missing_contract',
             client: rental.customer_name,
             reason: 'Contrato sin enlace',
             date: '-',
@@ -463,8 +536,15 @@ export const RentalsView: React.FC = () => {
                           </td>
                           <td className="px-4 py-2.5 text-gray-600 text-[11px]">{item.date}</td>
                           <td className="px-4 py-2.5 text-right">
-                            <button className="text-[10px] font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded transition-colors">
-                              {item.action}
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSuggestedAction(item);
+                              }}
+                              disabled={activeActionId === item.id}
+                              className="text-[10px] font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded transition-colors disabled:opacity-50 inline-flex items-center justify-center min-w-[100px]"
+                            >
+                              {activeActionId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : item.action}
                             </button>
                           </td>
                         </tr>
@@ -910,9 +990,10 @@ export const RentalsView: React.FC = () => {
       {/* Modals */}
       <RentalFormModal 
         isOpen={isFormOpen} 
-        onClose={() => setIsFormOpen(false)} 
+        onClose={() => { setIsFormOpen(false); setFormInitialFocus(undefined); }} 
         initialData={editingRentalId ? rentals.find(r => r.id === editingRentalId) || null : null}
         initialItems={editingRentalId ? rentals.find(r => r.id === editingRentalId)?.items || [] : []}
+        initialFocus={formInitialFocus}
         onSubmit={async (rentalData, itemsData) => {
           if (editingRentalId) {
             await updateRental(editingRentalId, rentalData);
@@ -1110,6 +1191,102 @@ export const RentalsView: React.FC = () => {
                   </div>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {paymentValidationModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setPaymentValidationModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-green-700">
+                <CheckCircle2 className="w-5 h-5" /> Validar Pago
+              </h3>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  ¿Confirmas que el pago de la renta ha sido recibido correctamente?
+                </p>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button onClick={() => setPaymentValidationModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">Cancelar</button>
+                  <button 
+                    onClick={async () => {
+                      if (selectedRentalId) {
+                        await changePaymentStatus(selectedRentalId, 'current');
+                        setPaymentValidationModalOpen(false);
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                  >
+                    Confirmar Pago
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {phoneModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setPhoneModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <Phone className="w-5 h-5 text-blue-600" /> Agregar Teléfono
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Número de teléfono</label>
+                  <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Ej: 5512345678" />
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button onClick={() => setPhoneModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">Cancelar</button>
+                  <button 
+                    onClick={async () => {
+                      if (newPhone && selectedRentalId) {
+                        await updateRental(selectedRentalId, { customer_phone: newPhone });
+                        setPhoneModalOpen(false);
+                        setNewPhone('');
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    disabled={!newPhone}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {contractLinkModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setContractLinkModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <LinkIcon className="w-5 h-5 text-blue-600" /> Enlace de Contrato
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">URL del contrato</label>
+                  <input type="url" value={newContractLink} onChange={e => setNewContractLink(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="https://..." />
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button onClick={() => setContractLinkModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">Cancelar</button>
+                  <button 
+                    onClick={async () => {
+                      if (newContractLink && selectedRentalId) {
+                        await updateRental(selectedRentalId, { contract_reference_url: newContractLink });
+                        setContractLinkModalOpen(false);
+                        setNewContractLink('');
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                    disabled={!newContractLink}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

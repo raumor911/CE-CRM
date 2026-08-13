@@ -9,9 +9,10 @@ export interface RentalFormModalProps {
   onSubmit: (rentalData: Partial<Rental>, itemsData: Partial<RentalItem>[]) => Promise<void>;
   initialData?: Rental | null;
   initialItems?: RentalItem[];
+  initialFocus?: string;
 }
 
-export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClose, onSubmit, initialData, initialItems }) => {
+export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClose, onSubmit, initialData, initialItems, initialFocus }) => {
   // Rental basic info
   const [formData, setFormData] = useState({
     customer_name: initialData?.customer_name || '',
@@ -60,8 +61,15 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
             }]
       );
       setError(null);
+      
+      if (initialFocus) {
+        setTimeout(() => {
+          const el = document.getElementById(`field-${initialFocus}`);
+          if (el) el.focus();
+        }, 100);
+      }
     }
-  }, [isOpen, initialData, initialItems]);
+  }, [isOpen, initialData, initialItems, initialFocus]);
 
   const handleItemChange = (index: number, field: keyof RentalItem, value: any) => {
     const newItems = [...items];
@@ -264,6 +272,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                       Vencimiento Contractual
                     </label>
                     <input
+                      id="field-contractual_end_date"
                       type="date"
                       className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.contractual_end_date}
