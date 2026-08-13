@@ -54,8 +54,29 @@ export const RentalsView: React.FC = () => {
   
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    payment: 'all',
+    expiration: 'all',
+    equipment: ''
+  });
+  const [tempFilters, setTempFilters] = useState(filters);
+  
+  const applyFilters = () => {
+    setFilters(tempFilters);
+    setIsFilterOpen(false);
+  };
+  
+  const clearFilters = () => {
+    const defaultFilters = { status: 'all', payment: 'all', expiration: 'all', equipment: '' };
+    setTempFilters(defaultFilters);
+    setFilters(defaultFilters);
+    setIsFilterOpen(false);
+  };
+  
+  const activeFiltersCount = Object.values(filters).filter(v => v !== 'all' && v !== '').length;
 
   useEffect(() => {
     fetchRentals();
@@ -232,23 +253,46 @@ export const RentalsView: React.FC = () => {
   // Filtrado de Rentas Principal
   const filteredRentals = useMemo(() => {
     return rentals.filter(rental => {
-      if (statusFilter !== 'all' && rental.status !== statusFilter) return false;
-      if (paymentFilter !== 'all' && rental.payment_status !== paymentFilter) return false;
+      if (filters.status !== 'all' && rental.status !== filters.status) return false;
+      if (filters.payment !== 'all' && rental.payment_status !== filters.payment) return false;
+
+      if (filters.expiration !== 'all') {
+        if (filters.expiration === 'none') {
+          if (rental.contractual_end_date) return false;
+        } else {
+          if (!rental.contractual_end_date) return false;
+          const endDate = parseLocalDate(rental.contractual_end_date);
+          if (!endDate) return false;
+          
+          const today = startOfDay(new Date());
+          const diffDays = differenceInDays(endDate, today);
+          
+          if (filters.expiration === 'expired' && diffDays >= 0) return false;
+          if (filters.expiration === '0-7' && (diffDays < 0 || diffDays > 7)) return false;
+          if (filters.expiration === '8-15' && (diffDays < 8 || diffDays > 15)) return false;
+        }
+      }
+
+      if (filters.equipment) {
+        const eq = filters.equipment.toLowerCase().replace(/\s+/g, '');
+        const hasEquipment = rental.items?.some(item => (item.equipment_description?.toLowerCase().replace(/\s+/g, '') || '').includes(eq));
+        if (!hasEquipment) return false;
+      }
 
       if (searchQuery) {
-        const q = searchQuery.toLowerCase().trim();
+        const q = searchQuery.toLowerCase().replace(/\s+/g, '');
         const match = 
-          rental.customer_name?.toLowerCase().includes(q) ||
-          rental.customer_phone?.toLowerCase().includes(q) ||
-          rental.contact_name?.toLowerCase().includes(q) ||
-          rental.project_name?.toLowerCase().includes(q) ||
-          rental.location?.toLowerCase().includes(q) ||
-          rental.items?.some(item => item.equipment_description?.toLowerCase().includes(q));
+          (rental.customer_name?.toLowerCase().replace(/\s+/g, '') || '').includes(q) ||
+          (rental.customer_phone?.toLowerCase().replace(/\s+/g, '') || '').includes(q) ||
+          (rental.contact_name?.toLowerCase().replace(/\s+/g, '') || '').includes(q) ||
+          (rental.project_name?.toLowerCase().replace(/\s+/g, '') || '').includes(q) ||
+          (rental.location?.toLowerCase().replace(/\s+/g, '') || '').includes(q) ||
+          rental.items?.some(item => (item.equipment_description?.toLowerCase().replace(/\s+/g, '') || '').includes(q));
         if (!match) return false;
       }
       return true;
     });
-  }, [rentals, searchQuery, statusFilter, paymentFilter]);
+  }, [rentals, searchQuery, filters]);
 
   const selectedRental = useMemo(() => {
     return rentals.find(r => r.id === selectedRentalId) || filteredRentals[0] || null;
@@ -366,7 +410,7 @@ export const RentalsView: React.FC = () => {
             </div>
 
             {/* Sección 2: Directorio de Rentas (Tabla Principal) */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col">
+            <div id="directorio-rentas" className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col">
               <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h2 className="text-sm font-semibold text-gray-900">Directorio de Rentas</h2>
                 
@@ -382,17 +426,94 @@ export const RentalsView: React.FC = () => {
                     />
                   </div>
                   
-                  {/* Selectores de Filtro simples en lugar de botón modal complejo para no sobrerepresentar la UI */}
-                  <select 
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="py-1.5 pl-2 pr-6 text-[11px] border border-gray-200 rounded-md focus:outline-none bg-white text-gray-700"
-                  >
-                    <option value="all">Estado: Todos</option>
-                    <option value="active">Activas</option>
-                    <option value="completed">Completadas</option>
-                    <option value="cancelled">Canceladas</option>
-                  </select>
+                  <div className="relative">
+                    <button 
+                      onClick={() => setIsFilterOpen(!isFilterOpen)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border rounded-md transition-colors ${activeFiltersCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      <Filter className="w-3.5 h-3.5" />
+                      Filtros
+                      {activeFiltersCount > 0 && (
+                        <span className="bg-blue-600 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center ml-1">
+                          {activeFiltersCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {isFilterOpen && (
+                      <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Estado de renta</label>
+                            <select 
+                              value={tempFilters.status}
+                              onChange={(e) => setTempFilters({...tempFilters, status: e.target.value})}
+                              className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="all">Todos</option>
+                              <option value="active">Activas</option>
+                              <option value="completed">Completadas</option>
+                              <option value="cancelled">Canceladas</option>
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Estado de pago</label>
+                            <select 
+                              value={tempFilters.payment}
+                              onChange={(e) => setTempFilters({...tempFilters, payment: e.target.value})}
+                              className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="all">Todos</option>
+                              <option value="current">Al corriente</option>
+                              <option value="pending_confirmation">Por confirmar</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Vencimiento</label>
+                            <select 
+                              value={tempFilters.expiration}
+                              onChange={(e) => setTempFilters({...tempFilters, expiration: e.target.value})}
+                              className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="all">Todos</option>
+                              <option value="8-15">Vence entre 8 y 15 días</option>
+                              <option value="0-7">Vence en 7 días o menos</option>
+                              <option value="expired">Contrato vencido</option>
+                              <option value="none">Sin fecha contractual</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Tipo o descripción de equipo</label>
+                            <input 
+                              type="text"
+                              placeholder="Ej. Laptop, Monitor..."
+                              value={tempFilters.equipment}
+                              onChange={(e) => setTempFilters({...tempFilters, equipment: e.target.value})}
+                              className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-gray-100">
+                          <button 
+                            onClick={clearFilters}
+                            className="px-3 py-1.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
+                          >
+                            Limpiar
+                          </button>
+                          <button 
+                            onClick={applyFilters}
+                            className="px-3 py-1.5 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                          >
+                            Aplicar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -495,6 +616,12 @@ export const RentalsView: React.FC = () => {
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex flex-col">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-sm font-semibold text-gray-900">Próximos vencimientos</h2>
+                <button 
+                  onClick={() => document.getElementById('directorio-rentas')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Ver todos
+                </button>
               </div>
               <div className="space-y-4">
                 {upcomingExpirations.length === 0 ? (
