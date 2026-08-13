@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useRentals, RentalWithItems } from '../hooks/useRentals';
 import { 
   Building2, 
@@ -18,7 +18,11 @@ import { es } from 'date-fns/locale';
 import { motion } from 'motion/react';
 
 export const RentalsView: React.FC = () => {
-  const { rentals, loading, error } = useRentals();
+  const { rentals, loading, error, fetchRentals } = useRentals();
+
+  useEffect(() => {
+    fetchRentals();
+  }, [fetchRentals]);
 
   // Mapear rentas activas y calcular métricas
   const { 
