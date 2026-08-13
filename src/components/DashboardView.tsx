@@ -3,10 +3,11 @@ import {
   LayoutDashboard, Users, TrendingUp, Clock, AlertCircle, 
   Target, Zap, TrendingDown, CalendarDays, Activity,
   DollarSign, ShieldAlert, Flame, CheckCircle2, ArrowRight,
-  ChevronDown, Check
+  ChevronDown, Check, Building2
 } from 'lucide-react';
 import { Lead } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
+import { useRentals } from '../hooks/useRentals';
 import { motion, AnimatePresence } from 'motion/react';
 
 const DAYS_TO_STALE = 7;
@@ -204,6 +205,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [openDropdown]);
+
+  const { rentals, fetchRentals } = useRentals();
+
+  useEffect(() => {
+    fetchRentals();
+  }, [fetchRentals]);
   
   const activeLeads = useMemo(() => 
     leads.filter(l => !l.is_archived && l.stage !== 'Cierre'), 
@@ -317,6 +324,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
     return Math.round((total / briefingLeads.length) * 100);
   }, [activeLeads]);
 
+  // 🏢 VALOR MENSUAL RENTAS
+  const activeRentalsValue = useMemo(() => {
+    let totalVAT = 0;
+    rentals.forEach(rental => {
+      if (rental.status === 'active') {
+        const rentalTotal = rental.monthly_amount_total || rental.items?.reduce((sum, item) => sum + (Number(item.monthly_total) || 0), 0) || 0;
+        totalVAT += Number(rentalTotal);
+      }
+    });
+    return totalVAT;
+  }, [rentals]);
+
   const stats = [
     { 
       label: 'Leads Activos', 
@@ -353,6 +372,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
       bg: 'bg-indigo-50' 
     },
     { 
+      label: 'Valor Mensual Rentas', 
+      value: formatCurrency(activeRentalsValue), 
+      sub: `${rentals.filter(r => r.status === 'active').length} rentas activas`,
+      icon: Building2, 
+      color: 'text-cyan-600', 
+      bg: 'bg-cyan-50' 
+    },
+    { 
       label: 'Ciclo Promedio', 
       value: closedLeads.length > 0 ? `${avgCycleDays} días` : 'N/D', 
       sub: closedLeads.length > 0 ? `${briefingProgress}% checklist` : 'Primer cierre pendiente',
@@ -371,7 +398,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map((stat, idx) => (
           <motion.div
             key={stat.label}
