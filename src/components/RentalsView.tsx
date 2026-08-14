@@ -312,6 +312,12 @@ export const RentalsView: React.FC = () => {
 
   const currentMonthName = format(new Date(), "MMMM 'de' yyyy", { locale: es });
 
+  const calculateTotal = (rental: RentalWithItems) => {
+    if (rental.monthly_amount_total) return Number(rental.monthly_amount_total);
+    if (!rental.items || rental.items.length === 0) return 0;
+    return rental.items.reduce((sum, item) => sum + (Number(item.monthly_total) || 0), 0);
+  };
+
   // Filtrado de Rentas Principal
   const filteredRentals = useMemo(() => {
     return rentals.filter(rental => {
@@ -433,12 +439,6 @@ export const RentalsView: React.FC = () => {
       setActivities([]);
     }
   }, [selectedRentalId, getRentalActivities]);
-
-  const calculateTotal = (rental: RentalWithItems) => {
-    if (rental.monthly_amount_total) return Number(rental.monthly_amount_total);
-    if (!rental.items || rental.items.length === 0) return 0;
-    return rental.items.reduce((sum, item) => sum + (Number(item.monthly_total) || 0), 0);
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
