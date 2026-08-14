@@ -109,6 +109,7 @@ export interface RentalPayment {
   id: string;
   rental_id: string;
   payment_period: string;
+  payment_due_date: string;
   expected_amount: number;
   status: 'pending_confirmation' | 'confirmed';
   confirmed_at: string | null;

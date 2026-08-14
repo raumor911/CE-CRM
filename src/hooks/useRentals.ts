@@ -92,22 +92,7 @@ export const useRentals = () => {
       // Registrar actividad de creación
       await addRentalActivity(rental.id, 'created', 'Renta creada exitosamente', { after: rentalData });
 
-      // Insertar pago mensual por defecto si es activa
-      if (rental.status === 'active') {
-        const d = new Date();
-        const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
-        const yyyy = firstDay.getFullYear();
-        const mm = String(firstDay.getMonth() + 1).padStart(2, '0');
-        const currentPeriod = `${yyyy}-${mm}-01`;
-        
-        await supabase.from('rental_payments').insert([{
-          rental_id: rental.id,
-          payment_period: currentPeriod,
-          expected_amount: rental.monthly_amount_total || 0,
-          created_by: user?.id,
-          status: 'pending_confirmation'
-        }]);
-      }
+      // Pago inicial cubierto, ensureCurrentMonthPayments manejará los meses siguientes
 
       return newRentalWithItems;
     } catch (err: any) {

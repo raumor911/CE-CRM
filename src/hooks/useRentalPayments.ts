@@ -2,9 +2,27 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { RentalPayment, RentalActivity, Rental } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { format, startOfMonth } from 'date-fns';
+import { format, startOfMonth, addMonths, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useRentals } from './useRentals'; // To call addRentalActivity if needed, or we can just insert directly.
+
+// Helper to safely parse local date string YYYY-MM-DD
+const parseLocalDate = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const calculateDueDate = (startDateStr: string, targetMonthDate: Date) => {
+  const startDate = parseLocalDate(startDateStr);
+  const startDay = startDate.getDate();
+  
+  // Get days in target month
+  const targetYear = targetMonthDate.getFullYear();
+  const targetMonth = targetMonthDate.getMonth();
+  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  
+  const dueDay = Math.min(startDay, daysInTargetMonth);
+  return format(new Date(targetYear, targetMonth, dueDay), 'yyyy-MM-dd');
+};
 
 export const useRentalPayments = () => {
   const { user } = useAuth();
@@ -12,7 +30,6 @@ export const useRentalPayments = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Calcula el periodo actual en la zona horaria local (asumiremos que date-fns hace un buen trabajo)
   const getCurrentPeriodString = () => {
     return format(startOfMonth(new Date()), 'yyyy-MM-01');
   };
@@ -23,36 +40,54 @@ export const useRentalPayments = () => {
     setLoading(true);
     setError(null);
     try {
-      const currentPeriod = getCurrentPeriodString();
+      const currentPeriodDate = startOfMonth(new Date());
+      const paymentsToUpsert: any[] = [];
 
-      // Preparar los pagos que deberían existir
-      const paymentsToUpsert = activeRentals.map(rental => {
-        // Calcular expected_amount
+      activeRentals.forEach(rental => {
+        const startDate = parseLocalDate(rental.start_date);
         let expectedAmount = rental.monthly_amount_total;
-        // Si no tenemos items no podemos calcular SUM(rental_items.monthly_total) de forma síncrona, 
-        // pero la regla dice usar rentals.monthly_amount_total.
-        // Asumimos que activeRentals tiene ese valor actualizado.
         
-        return {
-          rental_id: rental.id,
-          payment_period: currentPeriod,
-          expected_amount: expectedAmount,
-          created_by: user?.id,
-          status: 'pending_confirmation'
-        };
+        // La agenda comienza con la mensualidad del mes siguiente
+        let targetMonthDate = startOfMonth(addMonths(startDate, 1));
+        
+        // Generamos desde el mes siguiente al inicio hasta el mes actual
+        while (!isAfter(targetMonthDate, currentPeriodDate)) {
+          // No deben generarse pagos posteriores a contractual_end_date
+          if (rental.contractual_end_date) {
+            const endDate = parseLocalDate(rental.contractual_end_date);
+            const endMonthDate = startOfMonth(endDate);
+            if (isAfter(targetMonthDate, endMonthDate)) {
+              break;
+            }
+          }
+          
+          const periodStr = format(targetMonthDate, 'yyyy-MM-01');
+          const dueDateStr = calculateDueDate(rental.start_date, targetMonthDate);
+          
+          paymentsToUpsert.push({
+            rental_id: rental.id,
+            payment_period: periodStr,
+            payment_due_date: dueDateStr,
+            expected_amount: expectedAmount,
+            created_by: user?.id,
+            status: 'pending_confirmation'
+          });
+          
+          targetMonthDate = addMonths(targetMonthDate, 1);
+        }
       });
 
-      // Upsert ignores conflicts or updates (we only want to insert if missing, so we use upsert with onConflict)
-      const { error: upsertError } = await supabase
-        .from('rental_payments')
-        .upsert(paymentsToUpsert, { 
-          onConflict: 'rental_id, payment_period',
-          ignoreDuplicates: true // No sobrescribir pagos ya existentes
-        });
+      if (paymentsToUpsert.length > 0) {
+        const { error: upsertError } = await supabase
+          .from('rental_payments')
+          .upsert(paymentsToUpsert, { 
+            onConflict: 'rental_id, payment_period',
+            ignoreDuplicates: true 
+          });
 
-      if (upsertError) throw upsertError;
+        if (upsertError) throw upsertError;
+      }
 
-      // Despues de asegurarnos, recargamos los pagos del mes
       await getCurrentMonthPayments();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -72,8 +107,7 @@ export const useRentalPayments = () => {
       const { data, error: fetchError } = await supabase
         .from('rental_payments')
         .select('*')
-        .eq('payment_period', currentPeriod)
-        .order('created_at', { ascending: false });
+        .or(`payment_period.eq.${currentPeriod},status.eq.pending_confirmation`);
 
       if (fetchError) throw fetchError;
       
@@ -102,7 +136,6 @@ export const useRentalPayments = () => {
       const currentPeriod = getCurrentPeriodString();
       const now = new Date().toISOString();
 
-      // 1. Actualizar rental_payments
       const { error: paymentError } = await supabase
         .from('rental_payments')
         .update({
@@ -117,7 +150,6 @@ export const useRentalPayments = () => {
 
       if (paymentError) throw paymentError;
 
-      // 2. Actualizar rentals
       const { error: rentalError } = await supabase
         .from('rentals')
         .update({
@@ -129,7 +161,6 @@ export const useRentalPayments = () => {
 
       if (rentalError) throw rentalError;
 
-      // 3. Registrar actividad
       const periodLabel = format(startOfMonth(new Date()), 'MMMM \'de\' yyyy', { locale: es });
       
       const activityData = {
@@ -153,7 +184,6 @@ export const useRentalPayments = () => {
 
       if (activityError) throw activityError;
 
-      // Refrescar estado local
       setPayments(prev => prev.map(p => 
         p.id === paymentId 
           ? { ...p, status: 'confirmed', confirmed_at: now, receipt_url: optionalReceiptUrl || null, notes: optionalNotes || null, updated_at: now }
@@ -212,10 +242,6 @@ export const useRentalPayments = () => {
     if (!paymentIds.length) return {};
     
     try {
-      // Necesitamos obtener la última actividad de payment_follow_up para estos pagos.
-      // Como Supabase no tiene una forma sencilla de agrupar por JSONB en la consulta básica,
-      // traemos todas las actividades recientes de tipo payment_follow_up y filtramos en cliente.
-      
       const { data, error } = await supabase
         .from('rental_activities')
         .select('*')
@@ -246,7 +272,7 @@ export const useRentalPayments = () => {
     try {
       const { data, error } = await supabase
         .from('rental_payments')
-        .select('*, confirmed_by_user:confirmed_by(email)') // Asumiendo que podemos unir con users o algo así
+        .select('*, confirmed_by_user:confirmed_by(email)')
         .eq('id', paymentId)
         .single();
 
