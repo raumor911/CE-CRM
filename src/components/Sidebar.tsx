@@ -32,8 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'pipeline', label: 'Pipeline', icon: Kanban },
-    { id: 'directory', label: 'Directorio', icon: Table },
     { id: 'rentals', label: 'Rentas', icon: RentasIcon },
+    { id: 'directory', label: 'Directorio', icon: Table },
     { id: 'settings', label: 'Ajustes', icon: Settings },
   ] as const;
 
