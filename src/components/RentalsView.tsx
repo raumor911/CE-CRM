@@ -106,7 +106,7 @@ export const RentalsView: React.FC = () => {
   const [paymentToValidate, setPaymentToValidate] = useState<RentalPayment | null>(null);
   const [paymentToFollowUp, setPaymentToFollowUp] = useState<RentalPayment | null>(null);
   const [followUpsMap, setFollowUpsMap] = useState<Record<string, RentalActivity>>({});
-  const hasInitializedPayments = React.useRef(false);
+  const activeRentalsCountRef = React.useRef(0);
   
   // Activities
   const [activities, setActivities] = useState<RentalActivity[]>([]);
@@ -186,10 +186,10 @@ export const RentalsView: React.FC = () => {
   }, [fetchRentals]);
 
   useEffect(() => {
-    if (rentals.length > 0 && !hasInitializedPayments.current) {
-      const activeRentals = rentals.filter(r => r.status === 'active');
+    const activeRentals = rentals.filter(r => r.status === 'active');
+    if (activeRentals.length > 0 && activeRentals.length !== activeRentalsCountRef.current) {
       ensureCurrentMonthPayments(activeRentals);
-      hasInitializedPayments.current = true;
+      activeRentalsCountRef.current = activeRentals.length;
     }
   }, [rentals, ensureCurrentMonthPayments]);
 
