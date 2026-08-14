@@ -496,7 +496,12 @@ export const RentalsView: React.FC = () => {
             icon={<Calendar className="w-3.5 h-3.5 text-orange-600" />} 
             color="orange" 
           />
-          <KpiCard title="Pagos por confirmar" value={payments.filter(p => p.status === 'pending_confirmation').length.toString()} icon={<CreditCard className="w-3.5 h-3.5 text-amber-600" />} color="amber" />
+          <KpiCard 
+            title="Pagos por confirmar" 
+            value={payments.filter(p => p.status === 'pending_confirmation').length.toString()} 
+            icon={payments.filter(p => p.status === 'pending_confirmation').length > 0 ? <CreditCard className="w-3.5 h-3.5 text-amber-600" /> : <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />} 
+            color={payments.filter(p => p.status === 'pending_confirmation').length > 0 ? "amber" : "green"} 
+          />
           <KpiCard title="Valor mensual activo" value={formatCurrency(totalMonthlyWithVAT)} icon={<DollarSign className="w-3.5 h-3.5 text-green-600" />} color="green" />
         </div>
 
