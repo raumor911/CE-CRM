@@ -202,14 +202,12 @@ export const RentalsView: React.FC = () => {
   const { 
     activeCount, 
     expiring60DaysCount, 
-    immediateExpiringCount,
     totalMonthlyWithVAT,
     upcomingExpirations
   } = useMemo(() => {
     const today = startOfDay(new Date());
     let active = 0;
     let expiring60 = 0;
-    let immediateExpiring = 0;
     let totalVAT = 0;
 
     const expirations: UpcomingExpiration[] = [];
@@ -228,9 +226,7 @@ export const RentalsView: React.FC = () => {
           if (endDate) {
             const diffDays = differenceInDays(endDate, today);
 
-            if (diffDays >= 0 && diffDays <= 7) {
-              immediateExpiring++;
-            } else if (diffDays >= 8 && diffDays <= 60) {
+            if (diffDays >= 0 && diffDays <= 60) {
               expiring60++;
             }
 
@@ -254,7 +250,6 @@ export const RentalsView: React.FC = () => {
     return { 
       activeCount: active, 
       expiring60DaysCount: expiring60, 
-      immediateExpiringCount: immediateExpiring,
       totalMonthlyWithVAT: totalVAT,
       upcomingExpirations: expirations.slice(0, 5)
     };
@@ -326,7 +321,7 @@ export const RentalsView: React.FC = () => {
           
           if (filters.expiration === 'expired' && diffDays >= 0) return false;
           if (filters.expiration === '0-7' && (diffDays < 0 || diffDays > 7)) return false;
-          if (filters.expiration === '8-15' && (diffDays < 8 || diffDays > 15)) return false;
+          if (filters.expiration === '8-60' && (diffDays < 8 || diffDays > 60)) return false;
         }
       }
 
@@ -428,7 +423,12 @@ export const RentalsView: React.FC = () => {
         {/* Top KPI Bar - Grid Responsivo */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <KpiCard title="Rentas activas" value={activeCount.toString()} icon={<Building2 className="w-3.5 h-3.5 text-blue-600" />} color="blue" />
-          <KpiCard title="Vencen en 15 días" value={expiring60DaysCount.toString()} icon={<Calendar className="w-3.5 h-3.5 text-orange-600" />} color="orange" />
+          <KpiCard 
+            title="Vencen en 60 días" 
+            value={expiring60DaysCount.toString()} 
+            icon={<Calendar className="w-3.5 h-3.5 text-orange-600" />} 
+            color="orange" 
+          />
           <KpiCard title="Pagos por confirmar" value={payments.filter(p => p.status === 'pending_confirmation').length.toString()} icon={<CreditCard className="w-3.5 h-3.5 text-amber-600" />} color="amber" />
           <KpiCard title="Valor mensual activo" value={formatCurrency(totalMonthlyWithVAT)} icon={<DollarSign className="w-3.5 h-3.5 text-green-600" />} color="green" />
         </div>
@@ -640,7 +640,7 @@ export const RentalsView: React.FC = () => {
                               className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
                               <option value="all">Todos</option>
-                              <option value="8-15">Vence entre 8 y 15 días</option>
+                              <option value="8-60">Vence entre 8 y 60 días</option>
                               <option value="0-7">Vence en 7 días o menos</option>
                               <option value="expired">Contrato vencido</option>
                               <option value="none">Sin fecha contractual</option>
