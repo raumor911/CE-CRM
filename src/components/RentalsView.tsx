@@ -286,17 +286,13 @@ export const RentalsView: React.FC = () => {
     else if (paymentTab === 'confirmados') sorted = sorted.filter(p => p.status === 'confirmed');
     
     return sorted.sort((a, b) => {
-      if (a.status !== b.status) {
-        return a.status === 'pending_confirmation' ? -1 : 1;
-      }
-      const fa = followUpsMap[a.id];
-      const fb = followUpsMap[b.id];
-      if (!fa && fb) return -1;
-      if (fa && !fb) return 1;
-      if (fa && fb) {
-        return new Date(fa.created_at).getTime() - new Date(fb.created_at).getTime();
-      }
-      return 0;
+      const dateA = new Date(a.payment_due_date).getTime();
+      const dateB = new Date(b.payment_due_date).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      
+      const nameA = a.client || '';
+      const nameB = b.client || '';
+      return nameA.localeCompare(nameB);
     });
   }, [paymentsWithDetails, paymentTab, followUpsMap]);
 
