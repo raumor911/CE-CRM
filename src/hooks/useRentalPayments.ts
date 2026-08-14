@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { RentalPayment, RentalActivity, Rental } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { format, startOfMonth, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useCurrentBillingPeriod } from './useCurrentBillingPeriod';
 
 // Helper to safely parse local date string YYYY-MM-DD
 const parseLocalDate = (dateStr: string) => {
@@ -29,18 +30,16 @@ export const useRentalPayments = () => {
   const [payments, setPayments] = useState<RentalPayment[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const { currentPeriod, hasPeriodChanged, acknowledgePeriodChange } = useCurrentBillingPeriod();
 
-  const getCurrentPeriodString = () => {
-    return format(startOfMonth(new Date()), 'yyyy-MM-01');
-  };
-
-  const ensureCurrentMonthPayments = useCallback(async (activeRentals: Rental[]) => {
+  const ensureCurrentMonthPayments = useCallback(async (period: string, activeRentals: Rental[]) => {
     if (!activeRentals.length) return;
     
     setLoading(true);
     setError(null);
     try {
-      const currentPeriodDate = startOfMonth(new Date());
+      const currentPeriodDate = parseLocalDate(period);
       const paymentsToUpsert: any[] = [];
 
       activeRentals.forEach(rental => {
@@ -55,7 +54,7 @@ export const useRentalPayments = () => {
           return;
         }
 
-        const periodStr = format(targetMonthDate, 'yyyy-MM-01');
+        const periodStr = period;
         const dueDateStr = calculateDueDate(rental.start_date, targetMonthDate);
 
         // No deben generarse pagos posteriores a contractual_end_date
@@ -88,7 +87,8 @@ export const useRentalPayments = () => {
         if (upsertError) throw upsertError;
       }
 
-      await getCurrentMonthPayments();
+      // Instead of relying on a parameterless fetch, we should explicitly fetch for the period
+      await getCurrentMonthPayments(period);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -98,16 +98,14 @@ export const useRentalPayments = () => {
     }
   }, [user]);
 
-  const getCurrentMonthPayments = useCallback(async () => {
+  const getCurrentMonthPayments = useCallback(async (period: string) => {
     setLoading(true);
     setError(null);
     try {
-      const currentPeriod = getCurrentPeriodString();
-      
       const { data, error: fetchError } = await supabase
         .from('rental_payments')
         .select('*')
-        .eq('payment_period', currentPeriod);
+        .eq('payment_period', period);
 
       if (fetchError) throw fetchError;
       
@@ -133,62 +131,30 @@ export const useRentalPayments = () => {
     setLoading(true);
     setError(null);
     try {
-      const currentPeriod = getCurrentPeriodString();
-      const now = new Date().toISOString();
-
-      const { error: paymentError } = await supabase
-        .from('rental_payments')
-        .update({
-          status: 'confirmed',
-          confirmed_at: now,
-          confirmed_by: user?.id,
-          receipt_url: optionalReceiptUrl || null,
-          notes: optionalNotes || null,
-          updated_at: now
-        })
-        .eq('id', paymentId);
-
-      if (paymentError) throw paymentError;
-
-      const { error: rentalError } = await supabase
-        .from('rentals')
-        .update({
-          payment_status: 'current',
-          updated_by: user?.id,
-          updated_at: now
-        })
-        .eq('id', rentalId);
-
-      if (rentalError) throw rentalError;
-
       const periodLabel = format(startOfMonth(new Date()), 'MMMM \'de\' yyyy', { locale: es });
-      
-      const activityData = {
-        rental_id: rentalId,
-        activity_type: 'monthly_payment_confirmed',
-        description: `Pago de ${periodLabel} confirmado`,
-        previous_data: {
-          payment_id: paymentId,
-          payment_period: currentPeriod,
-          expected_amount: expectedAmount,
-          before: { status: 'pending_confirmation' },
-          after: { status: 'confirmed' },
-          receipt_url: optionalReceiptUrl || null
-        },
-        created_by: user?.id
-      };
 
-      const { error: activityError } = await supabase
-        .from('rental_activities')
-        .insert([activityData]);
+      const { error: rpcError } = await supabase.rpc('confirm_rental_payment', {
+        p_payment_id: paymentId,
+        p_rental_id: rentalId,
+        p_expected_amount: expectedAmount,
+        p_receipt_url: optionalReceiptUrl || null,
+        p_notes: optionalNotes || null,
+        p_user_id: user?.id,
+        p_period_label: periodLabel,
+        p_payment_period: currentPeriod
+      });
 
-      if (activityError) throw activityError;
+      if (rpcError) throw rpcError;
 
+      const now = new Date().toISOString();
       setPayments(prev => prev.map(p => 
         p.id === paymentId 
           ? { ...p, status: 'confirmed', confirmed_at: now, receipt_url: optionalReceiptUrl || null, notes: optionalNotes || null, updated_at: now }
           : p
       ));
+
+      // Hacemos refetch de respaldo
+      await getCurrentMonthPayments(currentPeriod);
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -209,8 +175,6 @@ export const useRentalPayments = () => {
     setLoading(true);
     setError(null);
     try {
-      const currentPeriod = getCurrentPeriodString();
-
       const activityData = {
         rental_id: rentalId,
         activity_type: 'payment_follow_up',
@@ -288,6 +252,9 @@ export const useRentalPayments = () => {
     payments,
     loading,
     error,
+    currentPeriod,
+    hasPeriodChanged,
+    acknowledgePeriodChange,
     ensureCurrentMonthPayments,
     getCurrentMonthPayments,
     confirmMonthlyPayment,
