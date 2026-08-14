@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { RentalPayment, RentalActivity, Rental } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { format, startOfMonth, addMonths, isAfter } from 'date-fns';
+import { format, startOfMonth, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // Helper to safely parse local date string YYYY-MM-DD
@@ -47,34 +47,34 @@ export const useRentalPayments = () => {
         const startDate = parseLocalDate(rental.start_date);
         let expectedAmount = rental.monthly_amount_total;
         
-        // La agenda comienza con la mensualidad del mes siguiente
-        let targetMonthDate = startOfMonth(addMonths(startDate, 1));
+        // Solo generamos el pago para el mes actual
+        let targetMonthDate = currentPeriodDate;
         
-        // Generamos desde el mes siguiente al inicio hasta el mes actual
-        while (!isAfter(targetMonthDate, currentPeriodDate)) {
-          const periodStr = format(targetMonthDate, 'yyyy-MM-01');
-          const dueDateStr = calculateDueDate(rental.start_date, targetMonthDate);
-
-          // No deben generarse pagos posteriores a contractual_end_date
-          if (rental.contractual_end_date) {
-            const endDate = parseLocalDate(rental.contractual_end_date);
-            const dueDate = parseLocalDate(dueDateStr);
-            if (endDate && dueDate && isAfter(dueDate, endDate)) {
-              break;
-            }
-          }
-          
-          paymentsToUpsert.push({
-            rental_id: rental.id,
-            payment_period: periodStr,
-            payment_due_date: dueDateStr,
-            expected_amount: expectedAmount,
-            created_by: user?.id,
-            status: 'pending_confirmation'
-          });
-          
-          targetMonthDate = addMonths(targetMonthDate, 1);
+        // Si la renta comenzó en el mes actual o en el futuro, no generamos cobro este mes (el primer mes está cubierto)
+        if (startDate >= currentPeriodDate) {
+          return;
         }
+
+        const periodStr = format(targetMonthDate, 'yyyy-MM-01');
+        const dueDateStr = calculateDueDate(rental.start_date, targetMonthDate);
+
+        // No deben generarse pagos posteriores a contractual_end_date
+        if (rental.contractual_end_date) {
+          const endDate = parseLocalDate(rental.contractual_end_date);
+          const dueDate = parseLocalDate(dueDateStr);
+          if (endDate && dueDate && isAfter(dueDate, endDate)) {
+            return;
+          }
+        }
+        
+        paymentsToUpsert.push({
+          rental_id: rental.id,
+          payment_period: periodStr,
+          payment_due_date: dueDateStr,
+          expected_amount: expectedAmount,
+          created_by: user?.id,
+          status: 'pending_confirmation'
+        });
       });
 
       if (paymentsToUpsert.length > 0) {
@@ -107,7 +107,7 @@ export const useRentalPayments = () => {
       const { data, error: fetchError } = await supabase
         .from('rental_payments')
         .select('*')
-        .or(`payment_period.eq.${currentPeriod},status.eq.pending_confirmation`);
+        .eq('payment_period', currentPeriod);
 
       if (fetchError) throw fetchError;
       
