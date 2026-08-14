@@ -393,6 +393,7 @@ export const RentalsView: React.FC = () => {
       const totalAmount = clientRentals.reduce((sum, r) => sum + calculateTotal(r), 0);
       
       const pendingCount = clientRentals.filter(r => r.payment_status === 'pending_confirmation').length;
+      const paymentStatus = pendingCount > 0 ? 'pending_confirmation' : 'current';
 
       const activeCount = clientRentals.filter(r => r.status === 'active').length;
       const completedCount = clientRentals.filter(r => r.status === 'completed').length;
@@ -413,6 +414,7 @@ export const RentalsView: React.FC = () => {
         nearestEndDate,
         totalAmount,
         pendingCount,
+        paymentStatus,
         rentalStatus,
         latestActivityAt
       };
@@ -554,7 +556,6 @@ export const RentalsView: React.FC = () => {
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Cliente</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Fecha de pago</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Importe esperado</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-center">Estado</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Acción</th>
                     </tr>
                   </thead>
@@ -587,12 +588,6 @@ export const RentalsView: React.FC = () => {
                               </div>
                             </td>
                             <td className="px-4 py-2.5 text-gray-900 font-medium text-right">{formatCurrency(payment.expected_amount)}</td>
-                            <td className="px-4 py-2.5 text-center">
-                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${isConfirmed ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
-                                {isConfirmed ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                {isConfirmed ? 'Confirmado' : 'Por confirmar'}
-                              </span>
-                            </td>
                             <td className="px-4 py-2.5 text-right space-x-2">
                               {!isConfirmed && (
                                 <button 
