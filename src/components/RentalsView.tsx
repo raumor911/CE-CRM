@@ -30,7 +30,10 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
-  Link as LinkIcon
+  Link as LinkIcon,
+  ChevronDown,
+  ChevronRight,
+  CornerDownRight
 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 import { format, differenceInDays, startOfDay } from 'date-fns';
@@ -163,6 +166,17 @@ export const RentalsView: React.FC = () => {
     expiration: 'all',
     equipment: ''
   });
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  const toggleGroup = (clientName: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(clientName)) next.delete(clientName);
+      else next.add(clientName);
+      return next;
+    });
+  };
+
   const [tempFilters, setTempFilters] = useState(filters);
   
 
@@ -341,6 +355,63 @@ export const RentalsView: React.FC = () => {
       return true;
     });
   }, [rentals, searchQuery, filters]);
+
+  
+  const groupedRentals = useMemo(() => {
+    const groups: Record<string, typeof filteredRentals> = {};
+    filteredRentals.forEach(rental => {
+      const client = rental.customer_name || 'Desconocido';
+      if (!groups[client]) groups[client] = [];
+      groups[client].push(rental);
+    });
+
+    return Object.entries(groups).map(([clientName, clientRentals]) => {
+      clientRentals.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+
+      const totalContainers = clientRentals.reduce((sum, r) => sum + (r.items?.reduce((s, i) => s + (i.quantity || 0), 0) || 0), 0);
+      
+      let earliestStartDate = clientRentals[0].start_date;
+      clientRentals.forEach(r => {
+        if (new Date(r.start_date) < new Date(earliestStartDate)) earliestStartDate = r.start_date;
+      });
+
+      let nearestEndDate: string | null = null;
+      clientRentals.forEach(r => {
+        if (r.contractual_end_date) {
+          if (!nearestEndDate || new Date(r.contractual_end_date) < new Date(nearestEndDate)) {
+            nearestEndDate = r.contractual_end_date;
+          }
+        }
+      });
+
+      const totalAmount = clientRentals.reduce((sum, r) => sum + calculateTotal(r), 0);
+      
+      const pendingCount = clientRentals.filter(r => r.payment_status === 'pending_confirmation').length;
+
+      const activeCount = clientRentals.filter(r => r.status === 'active').length;
+      const completedCount = clientRentals.filter(r => r.status === 'completed').length;
+      let rentalStatus = 'Mixto';
+      if (activeCount === clientRentals.length) rentalStatus = 'Activa';
+      else if (completedCount === clientRentals.length) rentalStatus = 'Finalizada';
+
+      let latestActivityAt = clientRentals[0].updated_at;
+      clientRentals.forEach(r => {
+        if (new Date(r.updated_at) > new Date(latestActivityAt)) latestActivityAt = r.updated_at;
+      });
+
+      return {
+        clientName,
+        rentals: clientRentals,
+        totalContainers,
+        earliestStartDate,
+        nearestEndDate,
+        totalAmount,
+        pendingCount,
+        rentalStatus,
+        latestActivityAt
+      };
+    }).sort((a, b) => a.clientName.localeCompare(b.clientName));
+  }, [filteredRentals]);
 
   const selectedRental = useMemo(() => {
     return rentals.find(r => r.id === selectedRentalId) || filteredRentals[0] || null;
@@ -703,57 +774,135 @@ export const RentalsView: React.FC = () => {
                           <td className="px-4 py-3"><div className="h-4 bg-gray-200 rounded-md w-12"></div></td>
                         </tr>
                       ))
-                    ) : filteredRentals.length === 0 ? (
+                    ) : groupedRentals.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="px-4 py-12 text-center text-gray-500">No se encontraron rentas.</td>
                       </tr>
                     ) : (
-                      filteredRentals.map((rental) => {
-                        const equipmentCount = rental.items?.reduce((total, item) => total + (item.quantity || 0), 0) || 0;
+                      groupedRentals.map((group) => {
+                        const isExpanded = searchQuery ? true : expandedGroups.has(group.clientName);
+                        const hasMultiple = group.rentals.length > 1;
+
                         return (
-                          <tr 
-                            key={rental.id} 
-                            onClick={() => setSelectedRentalId(rental.id)}
-                            className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${selectedRentalId === rental.id ? 'bg-blue-50/30 ring-1 ring-inset ring-blue-500/20' : ''}`}
-                          >
-                            <td className="px-4 py-2.5">
-                              <div className="font-medium text-gray-900 text-xs">{rental.customer_name}</div>
-                              <div className="text-[10px] text-gray-500 mt-0.5 truncate max-w-[160px]">
-                                {[rental.project_name, rental.location].filter(Boolean).join(' - ') || 'Sin ubicación'}
-                              </div>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <div className="flex items-center gap-1.5 text-gray-600 text-[11px]">
-                                <ContainerIcon size={12} className="text-gray-500" />
-                                {equipmentCount > 0 ? (equipmentCount === 1 ? '1 Contenedor' : `${equipmentCount} Contenedores`) : 'Sin contenedores'}
-                              </div>
-                            </td>
-                            <td className="px-4 py-2.5 text-gray-600 text-[11px]">
-                              {formatLocalDate(rental.start_date)}
-                            </td>
-                            <td className="px-4 py-2.5 text-[11px]">
-                              <span className="text-gray-900 font-medium">
-                                {formatLocalDate(rental.contractual_end_date)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-medium text-gray-900 text-[11px]">
-                              {formatCurrency(calculateTotal(rental))}
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ring-1 ring-inset ${getPaymentStatusColor(rental.payment_status)}`}>
-                                {rental.payment_status === 'current' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                                {getPaymentStatusLabel(rental.payment_status)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5 text-gray-500 text-[10px]">
-                              {formatDateTime(rental.updated_at)}
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(rental.status)}`}>
-                                {getStatusLabel(rental.status)}
-                              </span>
-                            </td>
-                          </tr>
+                          <React.Fragment key={group.clientName}>
+                            {/* Fila Principal / Consolidada */}
+                            <tr 
+                              onClick={() => {
+                                if (hasMultiple) {
+                                  toggleGroup(group.clientName);
+                                } else {
+                                  setSelectedRentalId(group.rentals[0].id);
+                                }
+                              }}
+                              className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${!hasMultiple && selectedRentalId === group.rentals[0].id ? 'bg-blue-50/30 ring-1 ring-inset ring-blue-500/20' : ''} ${hasMultiple ? 'bg-gray-50/30' : ''}`}
+                            >
+                              <td className="px-4 py-2.5">
+                                <div className="flex items-center gap-2">
+                                  {hasMultiple && (
+                                    <div className="text-gray-400">
+                                      {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div className="font-medium text-gray-900 text-xs flex items-center gap-2">
+                                      {group.clientName}
+                                      {hasMultiple && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[9px] font-medium border border-blue-100">
+                                          {group.rentals.length} rentas
+                                        </span>
+                                      )}
+                                    </div>
+                                    {!hasMultiple && (
+                                      <div className="text-[10px] text-gray-500 mt-0.5 truncate max-w-[160px]">
+                                        {[group.rentals[0].project_name, group.rentals[0].location].filter(Boolean).join(' - ') || 'Sin ubicación'}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <div className="flex items-center gap-1.5 text-gray-600 text-[11px]">
+                                  <ContainerIcon size={12} className="text-gray-500" />
+                                  {group.totalContainers > 0 ? (group.totalContainers === 1 ? '1 Contenedor' : `${group.totalContainers} Contenedores`) : 'Sin contenedores'}
+                                </div>
+                              </td>
+                              <td className="px-4 py-2.5 text-gray-600 text-[11px]">
+                                {formatLocalDate(group.earliestStartDate)}
+                              </td>
+                              <td className="px-4 py-2.5 text-[11px]">
+                                <span className="text-gray-900 font-medium">
+                                  {hasMultiple && group.nearestEndDate ? 'Próximo: ' : ''}{formatLocalDate(group.nearestEndDate || group.rentals[0].contractual_end_date)}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5 text-right font-medium text-gray-900 text-[11px]">
+                                {formatCurrency(group.totalAmount)}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ring-1 ring-inset ${group.paymentStatus === 'current' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-amber-50 text-amber-700 ring-amber-600/20'}`}>
+                                  {group.paymentStatus === 'current' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                                  {group.paymentStatus === 'current' ? 'Al corriente' : `${group.pendingCount} pendientes`}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5 text-gray-500 text-[10px]">
+                                {formatDateTime(group.latestActivityAt)}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${group.rentalStatus === 'Activa' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : group.rentalStatus === 'Finalizada' ? 'bg-gray-100 text-gray-700 border-gray-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                  {group.rentalStatus}
+                                </span>
+                              </td>
+                            </tr>
+
+                            {/* Filas Hijas */}
+                            {hasMultiple && isExpanded && group.rentals.map((rental, index) => {
+                              const equipmentCount = rental.items?.reduce((total, item) => total + (item.quantity || 0), 0) || 0;
+                              return (
+                                <tr 
+                                  key={rental.id}
+                                  onClick={() => setSelectedRentalId(rental.id)}
+                                  className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${selectedRentalId === rental.id ? 'bg-blue-50/30 ring-1 ring-inset ring-blue-500/20' : ''}`}
+                                >
+                                  <td className="px-4 py-2 pl-8">
+                                    <div className="flex items-start gap-2">
+                                      <CornerDownRight size={12} className="text-gray-300 mt-0.5" />
+                                      <div>
+                                        <div className="font-medium text-gray-700 text-xs">
+                                          Renta {index + 1} · {[rental.project_name, rental.location].filter(Boolean).join(' - ') || 'Sin ubicación'}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <div className="flex items-center gap-1.5 text-gray-500 text-[11px]">
+                                      {equipmentCount} {equipmentCount === 1 ? 'Contenedor' : 'Contenedores'}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-2 text-gray-500 text-[11px]">
+                                    {formatLocalDate(rental.start_date)}
+                                  </td>
+                                  <td className="px-4 py-2 text-[11px] text-gray-600">
+                                    {formatLocalDate(rental.contractual_end_date)}
+                                  </td>
+                                  <td className="px-4 py-2 text-right font-medium text-gray-600 text-[11px]">
+                                    {formatCurrency(calculateTotal(rental))}
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ring-1 ring-inset ${getPaymentStatusColor(rental.payment_status)}`}>
+                                      {getPaymentStatusLabel(rental.payment_status)}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2 text-gray-400 text-[10px]">
+                                    {formatDateTime(rental.updated_at)}
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${getStatusColor(rental.status)}`}>
+                                      {getStatusLabel(rental.status)}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </React.Fragment>
                         );
                       })
                     )}
@@ -761,7 +910,7 @@ export const RentalsView: React.FC = () => {
                 </table>
               </div>
               <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-[11px] text-gray-500">
-                <span>Mostrando {filteredRentals.length} resultados</span>
+                <span>Mostrando {groupedRentals.length} clientes · {filteredRentals.length} rentas</span>
               </div>
             </div>
 
