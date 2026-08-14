@@ -175,6 +175,9 @@ const PeriodValueInput = ({
   return null;
 };
 
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
   const now = new Date().toISOString();
   const [salesPeriodType, setSalesPeriodType] = useState<PeriodKey>('monthly');
@@ -295,22 +298,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
     });
   }, [leads, now]);
   
-  // 🏷️ MÉTRICAS POR CATEGORÍA (Top 3)
+  const currentMonthName = useMemo(() => {
+    if (pipelinePeriodType === 'monthly') {
+      const [year, month] = pipelinePeriodValue.split('-');
+      const date = new Date(Number(year), Number(month) - 1, 1);
+      return format(date, 'MMMM yyyy', { locale: es }).replace(/^\w/, c => c.toUpperCase());
+    } else if (pipelinePeriodType === 'annual') {
+      return pipelinePeriodValue;
+    }
+    return 'Mes actual';
+  }, [pipelinePeriodType, pipelinePeriodValue]);
+
+  // 🏷️ MÉTRICAS POR CATEGORÍA
+  const leadsCreatedInSelectedPeriod = useMemo(() => {
+    return leads.filter(lead => {
+      if (lead.is_archived) return false;
+      if (!lead.created_at) return false;
+  
+      return isDateInPeriod(
+        lead.created_at,
+        pipelinePeriodType,
+        pipelinePeriodValue
+      );
+    });
+  }, [leads, pipelinePeriodType, pipelinePeriodValue]);
+
   const categoryBreakdown = useMemo(() => {
     const map = new Map<string, { count: number; value: number }>();
-    activeLeads.forEach(l => {
+    leadsCreatedInSelectedPeriod.forEach(l => {
       const key = l.category || 'Sin categoría';
       const current = map.get(key) || { count: 0, value: 0 };
       map.set(key, {
         count: current.count + 1,
-        value: current.value + (l.budget || 0)
+        value: current.value + Number(l.budget || 0)
       });
     });
     return Array.from(map.entries())
       .map(([category, data]) => ({ category, ...data }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 3);
-  }, [activeLeads]);
+      .sort((a, b) => 
+        b.value - a.value || 
+        b.count - a.count || 
+        a.category.localeCompare(b.category)
+      );
+  }, [leadsCreatedInSelectedPeriod]);
   
   // ✅ CHECKLIST PROMEDIO EN BRIEFING
   const briefingProgress = useMemo(() => {
@@ -689,50 +719,60 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
         {/* TOP CATEGORÍAS + CHECKLIST PROGRESS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Top Categorías */}
+          {/* Demanda captada por categoría */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
             className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm"
           >
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-5">
-              <DollarSign size={20} className="text-amber-500" />
-              Top Categorías
-            </h3>
+            <div className="mb-5">
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <DollarSign size={20} className="text-amber-500" />
+                Demanda captada por categoría
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 pl-7">
+                {currentMonthName} · Según fecha de ingreso
+              </p>
+            </div>
             
             {categoryBreakdown.length > 0 ? (
               <div className="space-y-3">
-                {categoryBreakdown.map((cat, i) => (
-                  <div key={cat.category}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-bold text-slate-700 truncate">{cat.category}</span>
-                      <div className="flex items-center gap-2 ml-2 shrink-0">
-                        <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                          {cat.count}
-                        </span>
-                        <span className="text-[11px] font-black text-slate-900">
-                          {formatCurrency(cat.value)}
-                        </span>
+                {categoryBreakdown.map((cat, i) => {
+                  const highestCategoryValue = categoryBreakdown[0]?.value || 0;
+                  const percentage = highestCategoryValue > 0 ? (cat.value / highestCategoryValue) * 100 : 0;
+                  
+                  return (
+                    <div key={cat.category}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-bold text-slate-700 truncate">{cat.category}</span>
+                        <div className="flex items-center gap-2 ml-2 shrink-0">
+                          <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                            {cat.count}
+                          </span>
+                          <span className="text-[11px] font-black text-slate-900">
+                            {formatCurrency(cat.value)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ delay: 0.7 + i * 0.1 }}
+                          className={cn(
+                            "h-full rounded-full",
+                            i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-indigo-400' : 'bg-blue-400'
+                          )}
+                        />
                       </div>
                     </div>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${totalPipelineValue > 0 ? (cat.value / totalPipelineValue) * 100 : 0}%` }}
-                        transition={{ delay: 0.7 + i * 0.1 }}
-                        className={cn(
-                          "h-full rounded-full",
-                          i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-indigo-400' : 'bg-blue-400'
-                        )}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Sin datos aún</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Sin demanda registrada en este periodo</p>
               </div>
             )}
           </motion.div>
