@@ -742,7 +742,6 @@ export const RentalsView: React.FC = () => {
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Vencimiento</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Importe</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Pago</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Última act.</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Estado</th>
                     </tr>
                   </thead>
@@ -756,13 +755,12 @@ export const RentalsView: React.FC = () => {
                           <td className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-16"></div></td>
                           <td className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-16 ml-auto"></div></td>
                           <td className="px-4 py-3"><div className="h-4 bg-gray-200 rounded-full w-16"></div></td>
-                          <td className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-16"></div></td>
                           <td className="px-4 py-3"><div className="h-4 bg-gray-200 rounded-md w-12"></div></td>
                         </tr>
                       ))
                     ) : groupedRentals.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-12 text-center text-gray-500">No se encontraron rentas.</td>
+                        <td colSpan={7} className="px-4 py-12 text-center text-gray-500">No se encontraron rentas.</td>
                       </tr>
                     ) : (
                       groupedRentals.map((group) => {
@@ -829,9 +827,6 @@ export const RentalsView: React.FC = () => {
                                   {group.paymentStatus === 'current' ? 'Al corriente' : `${group.pendingCount} pendientes`}
                                 </span>
                               </td>
-                              <td className="px-4 py-2.5 text-gray-500 text-[10px]">
-                                {formatDateTime(group.latestActivityAt)}
-                              </td>
                               <td className="px-4 py-2.5">
                                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${group.rentalStatus === 'Activa' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : group.rentalStatus === 'Finalizada' ? 'bg-gray-100 text-gray-700 border-gray-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
                                   {group.rentalStatus}
@@ -876,9 +871,6 @@ export const RentalsView: React.FC = () => {
                                     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ring-1 ring-inset ${getPaymentStatusColor(rental.payment_status)}`}>
                                       {getPaymentStatusLabel(rental.payment_status)}
                                     </span>
-                                  </td>
-                                  <td className="px-4 py-2 text-gray-400 text-[10px]">
-                                    {formatDateTime(rental.updated_at)}
                                   </td>
                                   <td className="px-4 py-2">
                                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${getStatusColor(rental.status)}`}>
