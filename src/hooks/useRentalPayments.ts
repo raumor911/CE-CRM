@@ -52,17 +52,17 @@ export const useRentalPayments = () => {
         
         // Generamos desde el mes siguiente al inicio hasta el mes actual
         while (!isAfter(targetMonthDate, currentPeriodDate)) {
+          const periodStr = format(targetMonthDate, 'yyyy-MM-01');
+          const dueDateStr = calculateDueDate(rental.start_date, targetMonthDate);
+
           // No deben generarse pagos posteriores a contractual_end_date
           if (rental.contractual_end_date) {
             const endDate = parseLocalDate(rental.contractual_end_date);
-            const endMonthDate = startOfMonth(endDate);
-            if (isAfter(targetMonthDate, endMonthDate)) {
+            const dueDate = parseLocalDate(dueDateStr);
+            if (endDate && dueDate && isAfter(dueDate, endDate)) {
               break;
             }
           }
-          
-          const periodStr = format(targetMonthDate, 'yyyy-MM-01');
-          const dueDateStr = calculateDueDate(rental.start_date, targetMonthDate);
           
           paymentsToUpsert.push({
             rental_id: rental.id,
