@@ -550,7 +550,6 @@ export const RentalsView: React.FC = () => {
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Fecha de pago</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Importe esperado</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-center">Estado</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Último seguimiento</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Acción</th>
                     </tr>
                   </thead>
@@ -589,32 +588,19 @@ export const RentalsView: React.FC = () => {
                                 {isConfirmed ? 'Confirmado' : 'Por confirmar'}
                               </span>
                             </td>
-                            <td className="px-4 py-2.5 text-gray-500 text-[11px]">{followUpText}</td>
                             <td className="px-4 py-2.5 text-right space-x-2">
                               {!isConfirmed && (
-                                <>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPaymentToFollowUp(payment);
-                                      setPaymentFollowUpModalOpen(true);
-                                    }}
-                                    className="text-[10px] font-medium text-gray-600 border border-gray-200 hover:bg-gray-100 px-2 py-1 rounded transition-colors inline-flex items-center justify-center"
-                                  >
-                                    Registrar seguimiento
-                                  </button>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPaymentToValidate(payment);
-                                      setPaymentStatusTarget('current');
-                                      setPaymentValidationModalOpen(true);
-                                    }}
-                                    className="text-[10px] font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded transition-colors inline-flex items-center justify-center"
-                                  >
-                                    Validar pago
-                                  </button>
-                                </>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPaymentToValidate(payment);
+                                    setPaymentStatusTarget('current');
+                                    setPaymentValidationModalOpen(true);
+                                  }}
+                                  className="text-[10px] font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded transition-colors inline-flex items-center justify-center"
+                                >
+                                  Validar pago
+                                </button>
                               )}
                               {isConfirmed && (
                                 <button 
