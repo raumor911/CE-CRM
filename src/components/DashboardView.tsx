@@ -398,7 +398,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
         {stats.map((stat, idx) => (
           <motion.div
             key={stat.label}
@@ -411,9 +411,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
               <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl`}>
                 <stat.icon size={20} />
               </div>
-              <div className="flex flex-col items-end gap-1.5">
+              <div className="flex flex-col items-end gap-1.5 min-w-0">
                 {stat.periodKey && (
-                  <div className="flex items-center gap-1.5 relative z-20">
+                  <div className="flex flex-wrap items-center justify-end gap-1.5 relative z-20">
                     <PeriodValueInput
                       type={stat.periodType}
                       value={stat.periodValue}

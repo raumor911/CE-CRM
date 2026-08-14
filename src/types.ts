@@ -105,6 +105,21 @@ export interface RentalActivity {
   created_at: string;
 }
 
+export interface RentalPayment {
+  id: string;
+  rental_id: string;
+  payment_period: string;
+  expected_amount: number;
+  status: 'pending_confirmation' | 'confirmed';
+  confirmed_at: string | null;
+  receipt_url: string | null;
+  notes: string | null;
+  created_by: string | null;
+  confirmed_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LeadActivity {
   id: string;
   lead_id: string;

@@ -4,7 +4,6 @@ import {
   Kanban, 
   Table, 
   Settings, 
-  Key,
   ChevronLeft, 
   ChevronRight,
   LogOut,
@@ -13,6 +12,7 @@ import {
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { BrandConfig } from '../config/branding';
+import { RentasIcon } from './icons/BrandIcons';
 
 interface SidebarProps {
   currentView: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'settings';
@@ -33,7 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'pipeline', label: 'Pipeline', icon: Kanban },
     { id: 'directory', label: 'Directorio', icon: Table },
-    { id: 'rentals', label: 'Rentas', icon: Key },
+    { id: 'rentals', label: 'Rentas', icon: RentasIcon },
     { id: 'settings', label: 'Ajustes', icon: Settings },
   ] as const;
 
@@ -46,14 +46,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Header */}
       <div className={cn(
-        "flex items-center justify-center transition-all duration-300",
-        isCollapsed ? "p-4" : "p-6"
+        "flex items-center transition-all duration-300",
+        isCollapsed ? "p-4 justify-center" : "px-6 py-8 justify-start"
       )}>
         <div className={cn(
-          "bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center transition-all duration-300",
-          isCollapsed ? "w-12 h-12 p-1" : "w-full p-4"
+          "transition-all duration-300",
+          isCollapsed ? "w-10 h-10" : "w-40"
         )}>
-          <BrandConfig.Logo className="w-full h-full" />
+          <BrandConfig.Logo className="w-full h-auto" />
         </div>
       </div>
 

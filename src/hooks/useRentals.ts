@@ -73,7 +73,11 @@ export const useRentals = () => {
           .insert(itemsToInsert)
           .select();
 
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          // Compensación: eliminar la renta creada si falla la inserción de items
+          await supabase.from('rentals').delete().eq('id', rental.id);
+          throw itemsError;
+        }
         insertedItems = items || [];
       }
 
@@ -86,7 +90,24 @@ export const useRentals = () => {
       setRentals(prev => [newRentalWithItems, ...prev]);
 
       // Registrar actividad de creación
-      await addRentalActivity(rental.id, 'Creación', 'Renta creada exitosamente');
+      await addRentalActivity(rental.id, 'created', 'Renta creada exitosamente', { after: rentalData });
+
+      // Insertar pago mensual por defecto si es activa
+      if (rental.status === 'active') {
+        const d = new Date();
+        const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+        const yyyy = firstDay.getFullYear();
+        const mm = String(firstDay.getMonth() + 1).padStart(2, '0');
+        const currentPeriod = `${yyyy}-${mm}-01`;
+        
+        await supabase.from('rental_payments').insert([{
+          rental_id: rental.id,
+          payment_period: currentPeriod,
+          expected_amount: rental.monthly_amount_total || 0,
+          created_by: user?.id,
+          status: 'pending_confirmation'
+        }]);
+      }
 
       return newRentalWithItems;
     } catch (err: any) {
@@ -127,6 +148,10 @@ export const useRentals = () => {
         )
       );
 
+      // Si es una actualización simple sin una función especializada que ya registre la actividad
+      // podemos opcionalmente registrarla aquí. Por ahora, las actualizaciones específicas
+      // (teléfono, enlace) se registrarán desde los componentes de UI.
+
       return updatedRental;
     } catch (err: any) {
       setError(err.message);
@@ -140,7 +165,7 @@ export const useRentals = () => {
   // --- NUEVAS OPERACIONES ---
 
   // 1. Actividades de renta
-  const getRentalActivities = async (rentalId: string): Promise<RentalActivity[]> => {
+  const getRentalActivities = useCallback(async (rentalId: string): Promise<RentalActivity[]> => {
     try {
       const { data, error } = await supabase
         .from('rental_activities')
@@ -154,7 +179,7 @@ export const useRentals = () => {
       console.error('Error fetching rental activities:', err);
       return [];
     }
-  };
+  }, []);
 
   const addRentalActivity = async (
     rentalId: string,
@@ -176,6 +201,7 @@ export const useRentals = () => {
       if (activityError) throw activityError;
     } catch (err) {
       console.error('Error adding rental activity:', err);
+      throw err;
     }
   };
 
@@ -215,12 +241,14 @@ export const useRentals = () => {
       // Registrar actividad del recálculo
       await addRentalActivity(
         rentalId, 
-        'Recálculo de Totales', 
-        'Se recalcularon los totales de la renta por cambios en los artículos.'
+        'updated', 
+        'Se recalcularon los totales de la renta por cambios en los artículos.',
+        { after: updates }
       );
 
     } catch (err) {
       console.error('Error recalculating totals:', err);
+      throw err;
     }
   };
 
@@ -249,6 +277,13 @@ export const useRentals = () => {
       ));
 
       await recalculateTotals(rentalId);
+
+      await addRentalActivity(
+        rentalId,
+        'item_added',
+        `Equipo agregado: ${newItem.equipment_description}`,
+        { after: newItem }
+      );
 
       return newItem;
     } catch (err: any) {
@@ -280,6 +315,9 @@ export const useRentals = () => {
 
       if (updateError) throw updateError;
 
+      const rental = rentals.find(r => r.id === rentalId);
+      const previousItem = rental?.items.find(i => i.id === itemId);
+
       // Actualizar estado local
       setRentals(prev => prev.map(r => 
         r.id === rentalId 
@@ -288,6 +326,13 @@ export const useRentals = () => {
       ));
 
       await recalculateTotals(rentalId);
+
+      await addRentalActivity(
+        rentalId,
+        'item_updated',
+        `Equipo actualizado: ${updatedItem.equipment_description}`,
+        { before: previousItem, after: updatedItem }
+      );
 
       return updatedItem;
     } catch (err: any) {
@@ -303,6 +348,9 @@ export const useRentals = () => {
     setLoading(true);
     setError(null);
     try {
+      const rental = rentals.find(r => r.id === rentalId);
+      const previousItem = rental?.items.find(i => i.id === itemId);
+
       const { error: deleteError } = await supabase
         .from('rental_items')
         .delete()
@@ -318,6 +366,15 @@ export const useRentals = () => {
       ));
 
       await recalculateTotals(rentalId);
+
+      if (previousItem) {
+        await addRentalActivity(
+          rentalId,
+          'item_deleted',
+          `Equipo eliminado: ${previousItem.equipment_description}`,
+          { before: previousItem }
+        );
+      }
     } catch (err: any) {
       setError(err.message);
       console.error('Error removing rental item:', err);
@@ -334,9 +391,12 @@ export const useRentals = () => {
       await updateRental(rentalId, { payment_status: status });
       await addRentalActivity(
         rentalId, 
-        'Cambio de Estado de Pago', 
+        'payment_status_changed', 
         `Estado de pago cambiado a ${status === 'current' ? 'Al corriente' : 'Pendiente de confirmación'}`,
-        { previous_status: rental?.payment_status }
+        { 
+          before: { payment_status: rental?.payment_status },
+          after: { payment_status: status }
+        }
       );
     } catch (err) {
       console.error('Error changing payment status:', err);
@@ -348,12 +408,18 @@ export const useRentals = () => {
   const renewRental = async (rentalId: string, newEndDate: string) => {
     try {
       const rental = rentals.find(r => r.id === rentalId);
-      await updateRental(rentalId, { contractual_end_date: newEndDate });
+      await updateRental(rentalId, { 
+        contractual_end_date: newEndDate,
+        historical_missing_end_date: false
+      });
       await addRentalActivity(
         rentalId, 
-        'Renovación', 
+        'renewed', 
         `Renta renovada hasta ${newEndDate}`,
-        { previous_end_date: rental?.contractual_end_date }
+        { 
+          before: { contractual_end_date: rental?.contractual_end_date, historical_missing_end_date: rental?.historical_missing_end_date },
+          after: { contractual_end_date: newEndDate, historical_missing_end_date: false }
+        }
       );
     } catch (err) {
       console.error('Error renewing rental:', err);
@@ -362,20 +428,23 @@ export const useRentals = () => {
   };
 
   // 6. Completar renta
-  const completeRental = async (rentalId: string, reason?: string) => {
+  const completeRental = async (rentalId: string, effectiveEndDate: string, reason?: string) => {
     try {
       const rental = rentals.find(r => r.id === rentalId);
       const updates = { 
         status: 'completed' as const, 
-        effective_end_date: new Date().toISOString(),
+        effective_end_date: effectiveEndDate,
         ...(reason ? { completion_reason: reason } : {})
       };
       await updateRental(rentalId, updates);
       await addRentalActivity(
         rentalId, 
-        'Finalización', 
+        'completed', 
         `Renta completada${reason ? `: ${reason}` : ''}`,
-        { previous_status: rental?.status }
+        { 
+          before: { status: rental?.status },
+          after: { status: 'completed', effective_end_date: effectiveEndDate, completion_reason: reason }
+        }
       );
     } catch (err) {
       console.error('Error completing rental:', err);
@@ -384,20 +453,23 @@ export const useRentals = () => {
   };
 
   // 7. Cancelar renta
-  const cancelRental = async (rentalId: string, reason: string) => {
+  const cancelRental = async (rentalId: string, effectiveEndDate: string, reason: string) => {
     try {
       const rental = rentals.find(r => r.id === rentalId);
       const updates = { 
         status: 'cancelled' as const, 
-        effective_end_date: new Date().toISOString(),
+        effective_end_date: effectiveEndDate,
         cancellation_reason: reason 
       };
       await updateRental(rentalId, updates);
       await addRentalActivity(
         rentalId, 
-        'Cancelación', 
+        'cancelled', 
         `Renta cancelada: ${reason}`,
-        { previous_status: rental?.status }
+        { 
+          before: { status: rental?.status },
+          after: { status: 'cancelled', effective_end_date: effectiveEndDate, cancellation_reason: reason }
+        }
       );
     } catch (err) {
       console.error('Error cancelling rental:', err);

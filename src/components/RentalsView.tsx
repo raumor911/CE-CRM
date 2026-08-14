@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRentals, RentalWithItems } from '../hooks/useRentals';
-import { RentalActivity } from '../types';
+import { useRentalPayments } from '../hooks/useRentalPayments';
+import { RentalActivity, RentalItem, RentalPayment } from '../types';
 import { RentalFormModal } from './modals/RentalFormModal';
+import { ContainerIcon } from './icons/BrandIcons';
 import { 
   Building2, 
   Calendar, 
@@ -27,6 +29,7 @@ import {
   CheckSquare,
   Trash2,
   Loader2,
+  AlertCircle,
   Link as LinkIcon
 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
@@ -34,19 +37,15 @@ import { format, differenceInDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 
-export type RentalAlertType = 'expired' | 'expiring_soon' | 'expiring_15' | 'pending_payment' | 'missing_date' | 'missing_phone' | 'missing_contract';
 
-export interface RentalAlert {
-  id: string;
+
+interface UpcomingExpiration {
   rentalId: string;
-  type: RentalAlertType;
   client: string;
-  reason: string;
-  date: string;
-  updated: string;
-  action: string;
-  isCritical: boolean;
-  isUpcoming: boolean;
+  amount: number;
+  date: Date;
+  days: number;
+  urgency: 'red' | 'orange' | 'yellow';
 }
 
 // Date utility to avoid timezone shifts
@@ -62,6 +61,13 @@ const formatLocalDate = (dateStr?: string | null): string => {
   const date = parseLocalDate(dateStr);
   if (!date) return 'Sin registrar';
   return format(date, 'dd/MM/yyyy');
+};
+
+const formatDateTime = (dateStr?: string | null): string => {
+  if (!dateStr) return 'Sin registrar';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 'Sin registrar';
+  return format(date, 'dd/MM/yyyy HH:mm');
 };
 
 const formatShortDate = (dateStr?: string | null): string => {
@@ -88,7 +94,19 @@ export const RentalsView: React.FC = () => {
     removeRentalItem
   } = useRentals();
   const [selectedRentalId, setSelectedRentalId] = useState<string | null>(null);
-  const [attentionTab, setAttentionTab] = useState<'todas' | 'criticas' | 'proximas'>('todas');
+  const {
+    payments,
+    ensureCurrentMonthPayments,
+    confirmMonthlyPayment,
+    registerPaymentFollowUp,
+    getPaymentFollowUps
+  } = useRentalPayments();
+
+  const [paymentTab, setPaymentTab] = useState<'pendientes' | 'confirmados' | 'todos'>('pendientes');
+  const [paymentToValidate, setPaymentToValidate] = useState<RentalPayment | null>(null);
+  const [paymentToFollowUp, setPaymentToFollowUp] = useState<RentalPayment | null>(null);
+  const [followUpsMap, setFollowUpsMap] = useState<Record<string, RentalActivity>>({});
+  const hasInitializedPayments = React.useRef(false);
   
   // Activities
   const [activities, setActivities] = useState<RentalActivity[]>([]);
@@ -100,7 +118,7 @@ export const RentalsView: React.FC = () => {
   const [formInitialFocus, setFormInitialFocus] = useState<string | undefined>(undefined);
 
   // Active Action State
-  const [activeActionId, setActiveActionId] = useState<string | null>(null);
+
 
   // Action Modals
   const [renewModalOpen, setRenewModalOpen] = useState(false);
@@ -108,23 +126,32 @@ export const RentalsView: React.FC = () => {
   
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [completeReason, setCompleteReason] = useState('');
+  const [completeDate, setCompleteDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelDate, setCancelDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpNotes, setFollowUpNotes] = useState('');
+  
+  const [paymentFollowUpModalOpen, setPaymentFollowUpModalOpen] = useState(false);
+  const [paymentFollowUpNotes, setPaymentFollowUpNotes] = useState('');
+  const [paymentFollowUpType, setPaymentFollowUpType] = useState('Llamada');
 
   const [paymentValidationModalOpen, setPaymentValidationModalOpen] = useState(false);
+  const [paymentDetailModalOpen, setPaymentDetailModalOpen] = useState(false);
+  const [paymentStatusTarget, setPaymentStatusTarget] = useState<'current' | 'pending_confirmation'>('current');
   
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [newPhone, setNewPhone] = useState('');
 
   const [contractLinkModalOpen, setContractLinkModalOpen] = useState(false);
   const [newContractLink, setNewContractLink] = useState('');
+  const [newContractType, setNewContractType] = useState<'document' | 'folder'>('document');
 
   const [itemModalOpen, setItemModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<RentalItem | null>(null);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -138,35 +165,7 @@ export const RentalsView: React.FC = () => {
   });
   const [tempFilters, setTempFilters] = useState(filters);
   
-  const handleSuggestedAction = (alert: RentalAlert) => {
-    setSelectedRentalId(alert.rentalId);
-    setActiveActionId(alert.id);
-    
-    setTimeout(() => {
-      switch (alert.type) {
-        case 'expired':
-        case 'expiring_soon':
-        case 'expiring_15':
-          setRenewModalOpen(true);
-          break;
-        case 'pending_payment':
-          setPaymentValidationModalOpen(true);
-          break;
-        case 'missing_date':
-          setEditingRentalId(alert.rentalId);
-          setFormInitialFocus('contractual_end_date');
-          setIsFormOpen(true);
-          break;
-        case 'missing_phone':
-          setPhoneModalOpen(true);
-          break;
-        case 'missing_contract':
-          setContractLinkModalOpen(true);
-          break;
-      }
-      setActiveActionId(null);
-    }, 150);
-  };
+
 
   const applyFilters = () => {
     setFilters(tempFilters);
@@ -186,26 +185,34 @@ export const RentalsView: React.FC = () => {
     fetchRentals();
   }, [fetchRentals]);
 
+  useEffect(() => {
+    if (rentals.length > 0 && !hasInitializedPayments.current) {
+      const activeRentals = rentals.filter(r => r.status === 'active');
+      ensureCurrentMonthPayments(activeRentals);
+      hasInitializedPayments.current = true;
+    }
+  }, [rentals, ensureCurrentMonthPayments]);
+
+  useEffect(() => {
+    if (payments.length > 0) {
+      getPaymentFollowUps(payments.map(p => p.id)).then(setFollowUpsMap);
+    }
+  }, [payments, getPaymentFollowUps]);
+
   const { 
     activeCount, 
-    expiring15DaysCount,
+    expiring15DaysCount, 
     immediateExpiringCount,
-    expiredCount, 
-    pendingPaymentsCount,
     totalMonthlyWithVAT,
-    alerts,
     upcomingExpirations
   } = useMemo(() => {
     const today = startOfDay(new Date());
     let active = 0;
     let expiring15 = 0;
     let immediateExpiring = 0;
-    let expired = 0;
-    let pendingPayments = 0;
     let totalVAT = 0;
 
-    const generatedAlerts: RentalAlert[] = [];
-    const expirations: any[] = [];
+    const expirations: UpcomingExpiration[] = [];
 
     rentals.forEach(rental => {
       const isRentalActive = rental.status === 'active';
@@ -213,160 +220,92 @@ export const RentalsView: React.FC = () => {
       if (isRentalActive) {
         active++;
         
-        // Calcular total mensual
         const rentalTotal = rental.monthly_amount_total || rental.items?.reduce((sum, item) => sum + (Number(item.monthly_total) || 0), 0) || 0;
         totalVAT += Number(rentalTotal);
 
-        let diffDays = null;
         if (rental.contractual_end_date) {
           const endDate = parseLocalDate(rental.contractual_end_date);
           if (endDate) {
-            diffDays = differenceInDays(endDate, today);
+            const diffDays = differenceInDays(endDate, today);
 
-            if (diffDays < 0) {
-              expired++;
-              generatedAlerts.push({
-                id: rental.id + '_expired',
-                rentalId: rental.id,
-                type: 'expired',
-                client: rental.customer_name,
-                reason: 'Contrato vencido',
-                date: formatLocalDate(rental.contractual_end_date),
-                updated: formatLocalDate(rental.updated_at),
-                action: 'Actualizar vigencia',
-                isCritical: true,
-                isUpcoming: false
-              });
-            } else if (diffDays >= 0 && diffDays <= 7) {
+            if (diffDays >= 0 && diffDays <= 7) {
               immediateExpiring++;
-              generatedAlerts.push({
-                id: rental.id + '_expiring_soon',
-                rentalId: rental.id,
-                type: 'expiring_soon',
-                client: rental.customer_name,
-                reason: `Vence en ${diffDays} días`,
-                date: formatLocalDate(rental.contractual_end_date),
-                updated: formatLocalDate(rental.updated_at),
-                action: 'Renovar',
-                isCritical: true,
-                isUpcoming: false
-              });
             } else if (diffDays >= 8 && diffDays <= 15) {
               expiring15++;
-              generatedAlerts.push({
-                id: rental.id + '_expiring_15',
-                rentalId: rental.id,
-                type: 'expiring_15',
-                client: rental.customer_name,
-                reason: `Vence en ${diffDays} días`,
-                date: formatLocalDate(rental.contractual_end_date),
-                updated: formatLocalDate(rental.updated_at),
-                action: 'Renovar',
-                isCritical: false,
-                isUpcoming: true
-              });
             }
 
-            if (diffDays >= 0) {
+            if (diffDays >= 0 && diffDays <= 15) {
               expirations.push({
                 rentalId: rental.id,
                 client: rental.customer_name,
                 amount: rentalTotal,
                 date: endDate,
                 days: diffDays,
-                urgency: diffDays <= 7 ? 'red' : diffDays <= 15 ? 'orange' : 'yellow'
+                urgency: diffDays <= 7 ? 'red' : 'orange'
               });
             }
           }
         }
-
-        if (rental.payment_status === 'pending_confirmation') {
-          pendingPayments++;
-          generatedAlerts.push({
-            id: rental.id + '_pending_payment',
-            rentalId: rental.id,
-            type: 'pending_payment',
-            client: rental.customer_name,
-            reason: 'Pago por confirmar',
-            date: '-',
-            updated: formatLocalDate(rental.updated_at),
-            action: 'Validar pago',
-            isCritical: true,
-            isUpcoming: false
-          });
-        }
-
-        if (rental.historical_missing_end_date) {
-          generatedAlerts.push({
-            id: rental.id + '_missing_date',
-            rentalId: rental.id,
-            type: 'missing_date',
-            client: rental.customer_name,
-            reason: 'Sin fecha contractual',
-            date: '-',
-            updated: formatLocalDate(rental.updated_at),
-            action: 'Agregar fecha',
-            isCritical: false,
-            isUpcoming: false
-          });
-        }
-
-        if (!rental.customer_phone) {
-          generatedAlerts.push({
-            id: rental.id + '_missing_phone',
-            rentalId: rental.id,
-            type: 'missing_phone',
-            client: rental.customer_name,
-            reason: 'Teléfono ausente',
-            date: '-',
-            updated: formatLocalDate(rental.updated_at),
-            action: 'Agregar teléfono',
-            isCritical: false,
-            isUpcoming: false
-          });
-        }
-
-        if (!rental.contract_reference_url) {
-          generatedAlerts.push({
-            id: rental.id + '_missing_contract',
-            rentalId: rental.id,
-            type: 'missing_contract',
-            client: rental.customer_name,
-            reason: 'Contrato sin enlace',
-            date: '-',
-            updated: formatLocalDate(rental.updated_at),
-            action: 'Agregar enlace',
-            isCritical: false,
-            isUpcoming: false
-          });
-        }
       }
     });
 
-    // Ordenar expiraciones ascendente
     expirations.sort((a, b) => a.date.getTime() - b.date.getTime());
 
     return { 
       activeCount: active, 
       expiring15DaysCount: expiring15, 
       immediateExpiringCount: immediateExpiring,
-      expiredCount: expired, 
-      pendingPaymentsCount: pendingPayments,
       totalMonthlyWithVAT: totalVAT,
-      alerts: generatedAlerts,
       upcomingExpirations: expirations.slice(0, 5)
     };
   }, [rentals]);
 
-  // Filtrado de Alertas
-  const filteredAlerts = useMemo(() => {
-    if (attentionTab === 'criticas') return alerts.filter(a => a.isCritical);
-    if (attentionTab === 'proximas') return alerts.filter(a => a.isUpcoming);
-    return alerts;
-  }, [alerts, attentionTab]);
 
-  const criticalCount = alerts.filter(a => a.isCritical).length;
-  const upcomingCount = alerts.filter(a => a.isUpcoming).length;
+
+  const paymentsWithDetails = useMemo(() => {
+    return payments.map(p => {
+      const rental = rentals.find(r => r.id === p.rental_id);
+      return {
+        ...p,
+        client: rental?.customer_name || 'Desconocido'
+      };
+    });
+  }, [payments, rentals]);
+
+  const { expected, confirmed, pending, progress } = useMemo(() => {
+    let exp = 0;
+    let conf = 0;
+    let pend = 0;
+    payments.forEach(p => {
+      exp += Number(p.expected_amount);
+      if (p.status === 'confirmed') conf += Number(p.expected_amount);
+      if (p.status === 'pending_confirmation') pend += Number(p.expected_amount);
+    });
+    const prog = exp > 0 ? (conf / exp) * 100 : 0;
+    return { expected: exp, confirmed: conf, pending: pend, progress: prog };
+  }, [payments]);
+
+  const filteredPayments = useMemo(() => {
+    let sorted = [...paymentsWithDetails];
+    if (paymentTab === 'pendientes') sorted = sorted.filter(p => p.status === 'pending_confirmation');
+    else if (paymentTab === 'confirmados') sorted = sorted.filter(p => p.status === 'confirmed');
+    
+    return sorted.sort((a, b) => {
+      if (a.status !== b.status) {
+        return a.status === 'pending_confirmation' ? -1 : 1;
+      }
+      const fa = followUpsMap[a.id];
+      const fb = followUpsMap[b.id];
+      if (!fa && fb) return -1;
+      if (fa && !fb) return 1;
+      if (fa && fb) {
+        return new Date(fa.created_at).getTime() - new Date(fb.created_at).getTime();
+      }
+      return 0;
+    });
+  }, [paymentsWithDetails, paymentTab, followUpsMap]);
+
+  const currentMonthName = format(new Date(), "MMMM 'de' yyyy", { locale: es });
 
   // Filtrado de Rentas Principal
   const filteredRentals = useMemo(() => {
@@ -477,8 +416,7 @@ export const RentalsView: React.FC = () => {
     <div className="flex-1 overflow-auto bg-gray-50 min-h-screen font-sans text-gray-900 relative">
       <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
         
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Rentas</h1>
+        <div className="flex justify-end items-center">
           <button 
             onClick={() => { setEditingRentalId(null); setIsFormOpen(true); }}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
@@ -487,12 +425,11 @@ export const RentalsView: React.FC = () => {
           </button>
         </div>
 
-        {/* Top KPI Bar - Grid 5 columnas */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {/* Top KPI Bar - Grid Responsivo */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <KpiCard title="Rentas activas" value={activeCount.toString()} icon={<Building2 className="w-3.5 h-3.5 text-blue-600" />} color="blue" />
           <KpiCard title="Vencen en 15 días" value={expiring15DaysCount.toString()} icon={<Calendar className="w-3.5 h-3.5 text-orange-600" />} color="orange" />
-          <KpiCard title="Rentas vencidas" value={expiredCount.toString()} icon={<AlertTriangle className="w-3.5 h-3.5 text-red-600" />} color="red" />
-          <KpiCard title="Pagos por confirmar" value={pendingPaymentsCount.toString()} icon={<CreditCard className="w-3.5 h-3.5 text-amber-600" />} color="amber" />
+          <KpiCard title="Pagos por confirmar" value={payments.filter(p => p.status === 'pending_confirmation').length.toString()} icon={<CreditCard className="w-3.5 h-3.5 text-amber-600" />} color="amber" />
           <KpiCard title="Valor mensual activo" value={formatCurrency(totalMonthlyWithVAT)} icon={<DollarSign className="w-3.5 h-3.5 text-green-600" />} color="green" />
         </div>
 
@@ -502,53 +439,125 @@ export const RentalsView: React.FC = () => {
           {/* Left Column (2/3) */}
           <div className="lg:col-span-8 space-y-6">
             
-            {/* Sección 1: Atención requerida */}
+            {/* Sección 1: Seguimiento de Pagos */}
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-              <div className="border-b border-gray-100 px-4 pt-3">
-                <h2 className="text-sm font-semibold text-gray-900">Atención requerida</h2>
-                <div className="flex gap-4 mt-3">
-                  <button onClick={() => setAttentionTab('todas')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${attentionTab === 'todas' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Todas ({alerts.length})</button>
-                  <button onClick={() => setAttentionTab('criticas')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${attentionTab === 'criticas' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Críticas ({criticalCount})</button>
-                  <button onClick={() => setAttentionTab('proximas')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${attentionTab === 'proximas' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Próximas ({upcomingCount})</button>
+              <div className="border-b border-gray-100 px-4 pt-4 pb-3">
+                <h2 className="text-sm font-semibold text-gray-900 capitalize">Seguimiento de pagos · {currentMonthName}</h2>
+                
+                {/* Resumen Mensual */}
+                <div className="grid grid-cols-4 gap-4 mt-4 mb-2">
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-1">Importe esperado</p>
+                    <p className="text-lg font-bold text-gray-900">{formatCurrency(expected)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-1">Importe confirmado</p>
+                    <p className="text-lg font-bold text-green-600">{formatCurrency(confirmed)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-1">Importe pendiente</p>
+                    <p className="text-lg font-bold text-amber-600">{formatCurrency(pending)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-1">Avance</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-bold text-blue-600">{Math.round(progress)}%</p>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 mt-4">
+                  <button onClick={() => setPaymentTab('pendientes')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${paymentTab === 'pendientes' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Pendientes</button>
+                  <button onClick={() => setPaymentTab('confirmados')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${paymentTab === 'confirmados' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Confirmados</button>
+                  <button onClick={() => setPaymentTab('todos')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${paymentTab === 'todos' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Todos</button>
                 </div>
               </div>
-              <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
+              <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                 <table className="w-full text-left text-xs whitespace-nowrap">
                   <thead className="bg-gray-50/50 text-gray-500 sticky top-0 z-10 backdrop-blur-sm">
                     <tr>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Cliente / Renta</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Motivo</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Fecha límite</th>
+                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Cliente</th>
+                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Periodo</th>
+                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Importe esperado</th>
+                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-center">Estado</th>
+                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Último seguimiento</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Acción</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredAlerts.length === 0 ? (
+                    {filteredPayments.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-gray-500 text-xs">No hay alertas para mostrar en esta categoría.</td>
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500 text-xs">No hay pagos para mostrar en esta pestaña.</td>
                       </tr>
                     ) : (
-                      filteredAlerts.map((item, i) => (
-                        <tr key={i} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedRentalId(item.rentalId)}>
-                          <td className="px-4 py-2.5 font-medium text-gray-900">{item.client}</td>
-                          <td className={`px-4 py-2.5 font-medium text-[11px] flex items-center gap-1.5 ${item.isCritical ? 'text-red-600' : 'text-orange-600'}`}>
-                            {item.isCritical ? <AlertTriangle className="w-3 h-3" /> : <CalendarClock className="w-3 h-3" />} {item.reason}
-                          </td>
-                          <td className="px-4 py-2.5 text-gray-600 text-[11px]">{item.date}</td>
-                          <td className="px-4 py-2.5 text-right">
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSuggestedAction(item);
-                              }}
-                              disabled={activeActionId === item.id}
-                              className="text-[10px] font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded transition-colors disabled:opacity-50 inline-flex items-center justify-center min-w-[100px]"
-                            >
-                              {activeActionId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : item.action}
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      filteredPayments.map((payment) => {
+                        const isConfirmed = payment.status === 'confirmed';
+                        const followUp = followUpsMap[payment.id];
+                        let followUpText = 'Sin seguimiento';
+                        if (isConfirmed && payment.confirmed_at) {
+                          followUpText = `Confirmado el ${format(new Date(payment.confirmed_at), 'dd/MM/yyyy')}`;
+                        } else if (followUp) {
+                          const fType = followUp.previous_data?.follow_up_type || 'Seguimiento';
+                          followUpText = `${fType} · ${formatShortDate(followUp.created_at)}`;
+                        }
+
+                        return (
+                          <tr key={payment.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedRentalId(payment.rental_id)}>
+                            <td className="px-4 py-2.5 font-medium text-gray-900">{payment.client}</td>
+                            <td className="px-4 py-2.5 text-gray-600 capitalize">{format(parseLocalDate(payment.payment_period) || new Date(), 'MMMM yyyy', { locale: es })}</td>
+                            <td className="px-4 py-2.5 text-gray-900 font-medium text-right">{formatCurrency(payment.expected_amount)}</td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${isConfirmed ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                                {isConfirmed ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                {isConfirmed ? 'Confirmado' : 'Por confirmar'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-gray-500 text-[11px]">{followUpText}</td>
+                            <td className="px-4 py-2.5 text-right space-x-2">
+                              {!isConfirmed && (
+                                <>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPaymentToFollowUp(payment);
+                                      setPaymentFollowUpModalOpen(true);
+                                    }}
+                                    className="text-[10px] font-medium text-gray-600 border border-gray-200 hover:bg-gray-100 px-2 py-1 rounded transition-colors inline-flex items-center justify-center"
+                                  >
+                                    Registrar seguimiento
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPaymentToValidate(payment);
+                                      setPaymentStatusTarget('current');
+                                      setPaymentValidationModalOpen(true);
+                                    }}
+                                    className="text-[10px] font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded transition-colors inline-flex items-center justify-center"
+                                  >
+                                    Validar pago
+                                  </button>
+                                </>
+                              )}
+                              {isConfirmed && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPaymentToValidate(payment);
+                                    setPaymentDetailModalOpen(true);
+                                  }}
+                                  className="text-[10px] font-medium text-gray-600 border border-gray-200 hover:bg-gray-100 px-2 py-1 rounded transition-colors inline-flex items-center justify-center"
+                                >
+                                  Ver detalle
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -565,7 +574,7 @@ export const RentalsView: React.FC = () => {
                     <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input 
                       type="text"
-                      placeholder="Buscar cliente, proyecto, equipo..."
+                      placeholder="Buscar cliente, proyecto, contenedor..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-8 pr-3 py-1.5 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-64 transition-all bg-gray-50 focus:bg-white"
@@ -632,7 +641,7 @@ export const RentalsView: React.FC = () => {
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Tipo o descripción de equipo</label>
+                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Tipo o descripción de contenedor</label>
                             <input 
                               type="text"
                               placeholder="Ej. Laptop, Monitor..."
@@ -668,7 +677,7 @@ export const RentalsView: React.FC = () => {
                   <thead className="bg-gray-50/80 text-gray-500 border-b border-gray-100">
                     <tr>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Cliente / Proyecto</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Equipo y cantidad</th>
+                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Contenedor y cantidad</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Inicio</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Vencimiento</th>
                       <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Importe</th>
@@ -712,8 +721,8 @@ export const RentalsView: React.FC = () => {
                             </td>
                             <td className="px-4 py-2.5">
                               <div className="flex items-center gap-1.5 text-gray-600 text-[11px]">
-                                <Package className="w-3 h-3" />
-                                {equipmentCount > 0 ? `${equipmentCount} equipos` : 'Sin equipos'}
+                                <ContainerIcon size={12} className="text-gray-500" />
+                                {equipmentCount > 0 ? (equipmentCount === 1 ? '1 Contenedor' : `${equipmentCount} Contenedores`) : 'Sin contenedores'}
                               </div>
                             </td>
                             <td className="px-4 py-2.5 text-gray-600 text-[11px]">
@@ -734,7 +743,7 @@ export const RentalsView: React.FC = () => {
                               </span>
                             </td>
                             <td className="px-4 py-2.5 text-gray-500 text-[10px]">
-                              {formatShortDate(rental.updated_at)}
+                              {formatDateTime(rental.updated_at)}
                             </td>
                             <td className="px-4 py-2.5">
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(rental.status)}`}>
@@ -843,20 +852,16 @@ export const RentalsView: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-gray-500">Pago</p>
-                        <button 
-                          onClick={() => changePaymentStatus(selectedRental.id, selectedRental.payment_status === 'current' ? 'pending_confirmation' : 'current')}
-                          className="font-medium text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-1"
-                          title="Click para cambiar estado"
-                        >
+                        <span className="font-medium text-gray-900 flex items-center gap-1">
                           {getPaymentStatusLabel(selectedRental.payment_status)}
-                        </button>
+                        </span>
                       </div>
                     </div>
 
-                    {/* Equipos */}
+                    {/* Contenedores */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Equipos asignados</p>
+                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Contenedores asignados</p>
                         <button 
                           onClick={() => { setEditingItem(null); setItemModalOpen(true); }}
                           className="text-[10px] text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
@@ -868,7 +873,7 @@ export const RentalsView: React.FC = () => {
                         <div className="space-y-2">
                           {selectedRental.items.map((item, idx) => (
                             <div key={idx} className="flex justify-between items-center bg-gray-50 px-2 py-1.5 rounded border border-gray-100 group">
-                              <span className="text-xs font-medium text-gray-700 truncate">{item.equipment_description || 'Equipo'}</span>
+                              <span className="text-xs font-medium text-gray-700 truncate">{item.equipment_description || 'Contenedor'}</span>
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] text-gray-500 bg-white px-1.5 rounded border border-gray-200">Cant: {item.quantity}</span>
                                 <div className="hidden group-hover:flex items-center gap-1">
@@ -876,7 +881,7 @@ export const RentalsView: React.FC = () => {
                                     <Edit2 className="w-3 h-3" />
                                   </button>
                                   <button onClick={() => {
-                                    if(window.confirm('¿Seguro que deseas eliminar este equipo?')) {
+                                    if(window.confirm('¿Seguro que deseas eliminar este contenedor?')) {
                                       removeRentalItem(item.id, selectedRental.id);
                                     }
                                   }} className="p-1 text-gray-400 hover:text-red-600 rounded">
@@ -888,7 +893,7 @@ export const RentalsView: React.FC = () => {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-500 italic">No hay equipos asignados</p>
+                        <p className="text-xs text-gray-500 italic">No hay contenedores asignados</p>
                       )}
                     </div>
 
@@ -1049,6 +1054,10 @@ export const RentalsView: React.FC = () => {
               <h3 className="text-lg font-bold mb-4">Finalizar Renta</h3>
               <div className="space-y-4">
                 <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Fecha efectiva de finalización</label>
+                  <input type="date" value={completeDate} onChange={e => setCompleteDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Motivo / Notas (Opcional)</label>
                   <textarea value={completeReason} onChange={e => setCompleteReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-24 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Todo devuelto en orden..."></textarea>
                 </div>
@@ -1056,8 +1065,8 @@ export const RentalsView: React.FC = () => {
                   <button onClick={() => setCompleteModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
                   <button 
                     onClick={async () => {
-                      if (selectedRentalId) {
-                        await completeRental(selectedRentalId, completeReason);
+                      if (selectedRentalId && completeDate) {
+                        await completeRental(selectedRentalId, completeDate, completeReason);
                         setCompleteModalOpen(false);
                         setCompleteReason('');
                       }
@@ -1079,6 +1088,10 @@ export const RentalsView: React.FC = () => {
               <h3 className="text-lg font-bold mb-4 text-red-600">Cancelar Contrato</h3>
               <div className="space-y-4">
                 <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Fecha efectiva de cancelación</label>
+                  <input type="date" value={cancelDate} onChange={e => setCancelDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+                </div>
+                <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Motivo de cancelación</label>
                   <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-24 focus:ring-2 focus:ring-red-500 outline-none" placeholder="Falta de pago, problema con el cliente..."></textarea>
                 </div>
@@ -1086,14 +1099,14 @@ export const RentalsView: React.FC = () => {
                   <button onClick={() => setCancelModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Volver</button>
                   <button 
                     onClick={async () => {
-                      if (cancelReason && selectedRentalId) {
-                        await cancelRental(selectedRentalId, cancelReason);
+                      if (cancelReason && cancelDate && selectedRentalId) {
+                        await cancelRental(selectedRentalId, cancelDate, cancelReason);
                         setCancelModalOpen(false);
                         setCancelReason('');
                       }
                     }}
                     className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
-                    disabled={!cancelReason}
+                    disabled={!cancelReason || !cancelDate}
                   >
                     Confirmar Cancelación
                   </button>
@@ -1137,11 +1150,57 @@ export const RentalsView: React.FC = () => {
           </div>
         )}
 
+        {paymentFollowUpModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setPaymentFollowUpModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-bold mb-4">Registrar Seguimiento de Pago</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Tipo de seguimiento</label>
+                  <select 
+                    value={paymentFollowUpType} 
+                    onChange={e => setPaymentFollowUpType(e.target.value)} 
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="Llamada">Llamada</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Revisión de pago">Revisión de pago</option>
+                    <option value="Nota general">Nota general</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+                  <textarea value={paymentFollowUpNotes} onChange={e => setPaymentFollowUpNotes(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-24 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="El cliente prometió transferir mañana..."></textarea>
+                </div>
+                <div className="flex justify-end gap-2 mt-6">
+                  <button onClick={() => setPaymentFollowUpModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
+                  <button 
+                    onClick={async () => {
+                      if (paymentFollowUpNotes && paymentToFollowUp) {
+                        await registerPaymentFollowUp(paymentToFollowUp.id, paymentToFollowUp.rental_id, paymentFollowUpType, paymentFollowUpNotes);
+                        setPaymentFollowUpModalOpen(false);
+                        setPaymentFollowUpNotes('');
+                        // Refetch followups
+                        getPaymentFollowUps(payments.map(p => p.id)).then(setFollowUpsMap);
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    disabled={!paymentFollowUpNotes}
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {itemModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setItemModalOpen(false)} />
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-              <h3 className="text-lg font-bold mb-4">{editingItem ? 'Editar Equipo' : 'Agregar Equipo'}</h3>
+              <h3 className="text-lg font-bold mb-4">{editingItem ? 'Editar Contenedor' : 'Agregar Contenedor'}</h3>
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 const form = e.target as HTMLFormElement;
@@ -1195,7 +1254,7 @@ export const RentalsView: React.FC = () => {
           </div>
         )}
 
-        {paymentValidationModalOpen && (
+        {paymentValidationModalOpen && paymentToValidate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50" onClick={() => setPaymentValidationModalOpen(false)} />
             <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
@@ -1203,19 +1262,33 @@ export const RentalsView: React.FC = () => {
                 <CheckCircle2 className="w-5 h-5" /> Validar Pago
               </h3>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  ¿Confirmas que el pago de la renta ha sido recibido correctamente?
-                </p>
+                <div className="bg-gray-50 p-3 rounded-lg text-sm mb-4">
+                  <p><span className="font-medium">Cliente:</span> {(paymentToValidate as any).client}</p>
+                  <p><span className="font-medium">Periodo:</span> {format(parseLocalDate(paymentToValidate.payment_period) || new Date(), 'MMMM yyyy', { locale: es })}</p>
+                  <p><span className="font-medium">Importe:</span> {formatCurrency(paymentToValidate.expected_amount)}</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">URL del comprobante (Opcional)</label>
+                  <input type="url" id="receiptUrl" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Notas (Opcional)</label>
+                  <textarea id="paymentNotes" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-20 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Referencia o comentario..."></textarea>
+                </div>
                 <div className="flex justify-end gap-2 mt-6">
                   <button onClick={() => setPaymentValidationModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">Cancelar</button>
                   <button 
                     onClick={async () => {
-                      if (selectedRentalId) {
-                        await changePaymentStatus(selectedRentalId, 'current');
+                      const receiptUrl = (document.getElementById('receiptUrl') as HTMLInputElement)?.value;
+                      const notes = (document.getElementById('paymentNotes') as HTMLTextAreaElement)?.value;
+                      try {
+                        await confirmMonthlyPayment(paymentToValidate.id, paymentToValidate.rental_id, paymentToValidate.expected_amount, receiptUrl, notes);
                         setPaymentValidationModalOpen(false);
+                      } catch (err) {
+                        console.error('Error changing payment status:', err);
                       }
                     }}
-                    className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                    className="px-4 py-2 text-sm text-white rounded-lg transition-colors shadow-sm bg-green-600 hover:bg-green-700"
                   >
                     Confirmar Pago
                   </button>
@@ -1242,9 +1315,14 @@ export const RentalsView: React.FC = () => {
                   <button 
                     onClick={async () => {
                       if (newPhone && selectedRentalId) {
-                        await updateRental(selectedRentalId, { customer_phone: newPhone });
-                        setPhoneModalOpen(false);
-                        setNewPhone('');
+                        try {
+                          await updateRental(selectedRentalId, { customer_phone: newPhone });
+                          await addRentalActivity(selectedRentalId, 'phone_added', 'Teléfono del cliente agregado', { after: { customer_phone: newPhone } });
+                          setPhoneModalOpen(false);
+                          setNewPhone('');
+                        } catch (err) {
+                          console.error('Error adding phone:', err);
+                        }
                       }
                     }}
                     className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
@@ -1270,14 +1348,38 @@ export const RentalsView: React.FC = () => {
                   <label className="block text-xs font-medium text-gray-700 mb-1">URL del contrato</label>
                   <input type="url" value={newContractLink} onChange={e => setNewContractLink(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="https://..." />
                 </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Tipo de enlace</label>
+                  <select
+                    value={newContractType}
+                    onChange={e => setNewContractType(e.target.value as 'document' | 'folder')}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="document">Documento</option>
+                    <option value="folder">Carpeta</option>
+                  </select>
+                </div>
                 <div className="flex justify-end gap-2 mt-6">
                   <button onClick={() => setContractLinkModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">Cancelar</button>
                   <button 
                     onClick={async () => {
                       if (newContractLink && selectedRentalId) {
-                        await updateRental(selectedRentalId, { contract_reference_url: newContractLink });
-                        setContractLinkModalOpen(false);
-                        setNewContractLink('');
+                        try {
+                          await updateRental(selectedRentalId, { 
+                            contract_reference_url: newContractLink,
+                            contract_reference_type: newContractType
+                          });
+                          await addRentalActivity(selectedRentalId, 'contract_link_added', 'Enlace del contrato agregado', { 
+                            after: { 
+                              contract_reference_url: newContractLink,
+                              contract_reference_type: newContractType
+                            } 
+                          });
+                          setContractLinkModalOpen(false);
+                          setNewContractLink('');
+                        } catch (err) {
+                          console.error('Error adding contract link:', err);
+                        }
                       }
                     }}
                     className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
