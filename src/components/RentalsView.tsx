@@ -99,6 +99,9 @@ export const RentalsView: React.FC = () => {
   const [selectedRentalId, setSelectedRentalId] = useState<string | null>(null);
   const {
     payments,
+    currentPeriod,
+    hasPeriodChanged,
+    acknowledgePeriodChange,
     ensureCurrentMonthPayments,
     confirmMonthlyPayment,
     registerPaymentFollowUp,
@@ -201,11 +204,22 @@ export const RentalsView: React.FC = () => {
 
   useEffect(() => {
     const activeRentals = rentals.filter(r => r.status === 'active');
+    let shouldUpdate = false;
+    
     if (activeRentals.length > 0 && activeRentals.length !== activeRentalsCountRef.current) {
-      ensureCurrentMonthPayments(activeRentals);
+      shouldUpdate = true;
       activeRentalsCountRef.current = activeRentals.length;
     }
-  }, [rentals, ensureCurrentMonthPayments]);
+    
+    if (hasPeriodChanged && activeRentals.length > 0) {
+      shouldUpdate = true;
+      acknowledgePeriodChange();
+    }
+
+    if (shouldUpdate) {
+      ensureCurrentMonthPayments(currentPeriod, activeRentals);
+    }
+  }, [rentals, currentPeriod, hasPeriodChanged, ensureCurrentMonthPayments, acknowledgePeriodChange]);
 
   useEffect(() => {
     if (payments.length > 0) {
@@ -318,11 +332,32 @@ export const RentalsView: React.FC = () => {
     return rental.items.reduce((sum, item) => sum + (Number(item.monthly_total) || 0), 0);
   };
 
+  const paymentStateMap = useMemo(() => {
+    const map = new Map<string, { state: 'pending' | 'confirmed' | 'not_applicable', payment: RentalPayment | null }>();
+    rentals.forEach(r => {
+       const p = payments.find(pay => pay.rental_id === r.id);
+       if (!p) {
+         map.set(r.id, { state: 'not_applicable', payment: null });
+       } else if (p.status === 'pending_confirmation') {
+         map.set(r.id, { state: 'pending', payment: p });
+       } else {
+         map.set(r.id, { state: 'confirmed', payment: p });
+       }
+    });
+    return map;
+  }, [rentals, payments]);
+
   // Filtrado de Rentas Principal
   const filteredRentals = useMemo(() => {
     return rentals.filter(rental => {
       if (filters.status !== 'all' && rental.status !== filters.status) return false;
-      if (filters.payment !== 'all' && rental.payment_status !== filters.payment) return false;
+      
+      if (filters.payment !== 'all') {
+        const pState = paymentStateMap.get(rental.id)?.state || 'not_applicable';
+        if (filters.payment === 'current' && pState !== 'confirmed') return false;
+        if (filters.payment === 'pending_confirmation' && pState !== 'pending') return false;
+        if (filters.payment === 'not_applicable' && pState !== 'not_applicable') return false;
+      }
 
       if (filters.expiration !== 'all') {
         if (filters.expiration === 'none') {
@@ -360,7 +395,7 @@ export const RentalsView: React.FC = () => {
       }
       return true;
     });
-  }, [rentals, searchQuery, filters]);
+  }, [rentals, searchQuery, filters, paymentStateMap]);
 
   
   const groupedRentals = useMemo(() => {
@@ -392,8 +427,18 @@ export const RentalsView: React.FC = () => {
 
       const totalAmount = clientRentals.reduce((sum, r) => sum + calculateTotal(r), 0);
       
-      const pendingCount = clientRentals.filter(r => r.payment_status === 'pending_confirmation').length;
-      const paymentStatus = pendingCount > 0 ? 'pending_confirmation' : 'current';
+      let pendingCount = 0;
+      let applicableCount = 0;
+      
+      clientRentals.forEach(r => {
+        const pState = paymentStateMap.get(r.id)?.state || 'not_applicable';
+        if (pState !== 'not_applicable') applicableCount++;
+        if (pState === 'pending') pendingCount++;
+      });
+
+      let paymentStatus = 'Sin pago este mes';
+      if (pendingCount > 0) paymentStatus = `${pendingCount} pendientes`;
+      else if (applicableCount > 0 && pendingCount === 0) paymentStatus = 'Al corriente';
 
       const activeCount = clientRentals.filter(r => r.status === 'active').length;
       const completedCount = clientRentals.filter(r => r.status === 'completed').length;
@@ -419,7 +464,7 @@ export const RentalsView: React.FC = () => {
         latestActivityAt
       };
     }).sort((a, b) => a.clientName.localeCompare(b.clientName));
-  }, [filteredRentals]);
+  }, [filteredRentals, paymentStateMap]);
 
   const selectedRental = useMemo(() => {
     return rentals.find(r => r.id === selectedRentalId) || filteredRentals[0] || null;
@@ -460,19 +505,21 @@ export const RentalsView: React.FC = () => {
     }
   };
 
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case 'current': return 'text-green-700 bg-green-50 ring-green-600/20';
-      case 'pending_confirmation': return 'text-amber-700 bg-amber-50 ring-amber-600/20';
+  const getPaymentStatusColor = (state: string) => {
+    switch (state) {
+      case 'confirmed': return 'text-emerald-700 bg-emerald-50 ring-emerald-600/20';
+      case 'pending': return 'text-amber-700 bg-amber-50 ring-amber-600/20';
+      case 'not_applicable': return 'text-gray-600 bg-gray-50 ring-gray-500/20';
       default: return 'text-gray-700 bg-gray-50 ring-gray-600/20';
     }
   };
 
-  const getPaymentStatusLabel = (status: string) => {
-    switch (status) {
-      case 'current': return 'Al corriente';
-      case 'pending_confirmation': return 'Pendiente';
-      default: return status;
+  const getPaymentStatusLabel = (state: string) => {
+    switch (state) {
+      case 'confirmed': return 'Al corriente';
+      case 'pending': return 'Pendiente';
+      case 'not_applicable': return 'Sin pago este mes';
+      default: return state;
     }
   };
 
@@ -681,7 +728,8 @@ export const RentalsView: React.FC = () => {
                             >
                               <option value="all">Todos</option>
                               <option value="current">Al corriente</option>
-                              <option value="pending_confirmation">Por confirmar</option>
+                              <option value="pending_confirmation">Pendiente</option>
+                              <option value="not_applicable">Sin pago este mes</option>
                             </select>
                           </div>
 
@@ -822,9 +870,13 @@ export const RentalsView: React.FC = () => {
                                 {formatCurrency(group.totalAmount)}
                               </td>
                               <td className="px-4 py-2.5">
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ring-1 ring-inset ${group.paymentStatus === 'current' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-amber-50 text-amber-700 ring-amber-600/20'}`}>
-                                  {group.paymentStatus === 'current' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                                  {group.paymentStatus === 'current' ? 'Al corriente' : `${group.pendingCount} pendientes`}
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ring-1 ring-inset ${
+                                  group.paymentStatus === 'Al corriente' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 
+                                  group.paymentStatus === 'Sin pago este mes' ? 'bg-gray-50 text-gray-600 ring-gray-500/20' : 
+                                  'bg-amber-50 text-amber-700 ring-amber-600/20'
+                                }`}>
+                                  {group.paymentStatus === 'Al corriente' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                                  {group.paymentStatus}
                                 </span>
                               </td>
                               <td className="px-4 py-2.5">
@@ -837,6 +889,7 @@ export const RentalsView: React.FC = () => {
                             {/* Filas Hijas */}
                             {hasMultiple && isExpanded && group.rentals.map((rental, index) => {
                               const equipmentCount = rental.items?.reduce((total, item) => total + (item.quantity || 0), 0) || 0;
+                              const pState = paymentStateMap.get(rental.id)?.state || 'not_applicable';
                               return (
                                 <tr 
                                   key={rental.id}
@@ -868,8 +921,8 @@ export const RentalsView: React.FC = () => {
                                     {formatCurrency(calculateTotal(rental))}
                                   </td>
                                   <td className="px-4 py-2">
-                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ring-1 ring-inset ${getPaymentStatusColor(rental.payment_status)}`}>
-                                      {getPaymentStatusLabel(rental.payment_status)}
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ring-1 ring-inset ${getPaymentStatusColor(pState)}`}>
+                                      {getPaymentStatusLabel(pState)}
                                     </span>
                                   </td>
                                   <td className="px-4 py-2">
@@ -983,7 +1036,7 @@ export const RentalsView: React.FC = () => {
                       <div>
                         <p className="text-gray-500">Pago</p>
                         <span className="font-medium text-gray-900 flex items-center gap-1">
-                          {getPaymentStatusLabel(selectedRental.payment_status)}
+                          {getPaymentStatusLabel(paymentStateMap.get(selectedRental.id)?.state || 'not_applicable')}
                         </span>
                       </div>
                     </div>
