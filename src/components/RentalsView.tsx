@@ -35,7 +35,11 @@ import {
   ChevronRight,
   CornerDownRight
 } from 'lucide-react';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, buildWhatsAppUrl } from '../lib/utils';
+import {
+  cleanCustomerName,
+  normalizeCustomerName,
+} from '../utils/customerIdentity';
 import { format, differenceInDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
@@ -171,11 +175,11 @@ export const RentalsView: React.FC = () => {
   });
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const toggleGroup = (clientName: string) => {
+  const toggleGroup = (groupKey: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
-      if (next.has(clientName)) next.delete(clientName);
-      else next.add(clientName);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
       return next;
     });
   };
@@ -399,18 +403,45 @@ export const RentalsView: React.FC = () => {
 
   
   const groupedRentals = useMemo(() => {
-    const groups: Record<string, typeof filteredRentals> = {};
+    const groups = new Map<
+      string,
+      {
+        key: string;
+        clientName: string;
+        rentals: typeof filteredRentals;
+      }
+    >();
+
     filteredRentals.forEach(rental => {
-      const client = rental.customer_name || 'Desconocido';
-      if (!groups[client]) groups[client] = [];
-      groups[client].push(rental);
+      const normalizedName =
+        normalizeCustomerName(rental.customer_name);
+
+      const clientKey = normalizedName
+        ? `name:${normalizedName}`
+        : `rental:${rental.id}`;
+
+      const existingGroup = groups.get(clientKey);
+
+      if (existingGroup) {
+        existingGroup.rentals.push(rental);
+        return;
+      }
+
+      groups.set(clientKey, {
+        key: clientKey,
+        clientName:
+          cleanCustomerName(rental.customer_name) ||
+          'Cliente sin identificar',
+        rentals: [rental],
+      });
     });
 
-    return Object.entries(groups).map(([clientName, clientRentals]) => {
+    return Array.from(groups.values()).map(group => {
+      const clientRentals = group.rentals;
       clientRentals.sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
       const totalContainers = clientRentals.reduce((sum, r) => sum + (r.items?.reduce((s, i) => s + (i.quantity || 0), 0) || 0), 0);
-      
+
       let earliestStartDate = clientRentals[0].start_date;
       clientRentals.forEach(r => {
         if (new Date(r.start_date) < new Date(earliestStartDate)) earliestStartDate = r.start_date;
@@ -426,10 +457,10 @@ export const RentalsView: React.FC = () => {
       });
 
       const totalAmount = clientRentals.reduce((sum, r) => sum + calculateTotal(r), 0);
-      
+
       let pendingCount = 0;
       let applicableCount = 0;
-      
+
       clientRentals.forEach(r => {
         const pState = paymentStateMap.get(r.id)?.state || 'not_applicable';
         if (pState !== 'not_applicable') applicableCount++;
@@ -452,7 +483,8 @@ export const RentalsView: React.FC = () => {
       });
 
       return {
-        clientName,
+        key: group.key,
+        clientName: group.clientName,
         rentals: clientRentals,
         totalContainers,
         earliestStartDate,
@@ -461,9 +493,11 @@ export const RentalsView: React.FC = () => {
         pendingCount,
         paymentStatus,
         rentalStatus,
-        latestActivityAt
+        latestActivityAt,
       };
-    }).sort((a, b) => a.clientName.localeCompare(b.clientName));
+    }).sort((a, b) =>
+      a.clientName.localeCompare(b.clientName, 'es-MX')
+    );
   }, [filteredRentals, paymentStateMap]);
 
   const selectedRental = useMemo(() => {
@@ -812,16 +846,16 @@ export const RentalsView: React.FC = () => {
                       </tr>
                     ) : (
                       groupedRentals.map((group) => {
-                        const isExpanded = searchQuery ? true : expandedGroups.has(group.clientName);
+                        const isExpanded = searchQuery ? true : expandedGroups.has(group.key);
                         const hasMultiple = group.rentals.length > 1;
 
                         return (
-                          <React.Fragment key={group.clientName}>
+                          <React.Fragment key={group.key}>
                             {/* Fila Principal / Consolidada */}
                             <tr 
                               onClick={() => {
                                 if (hasMultiple) {
-                                  toggleGroup(group.clientName);
+                                  toggleGroup(group.key);
                                 } else {
                                   setSelectedRentalId(group.rentals[0].id);
                                 }
@@ -1082,13 +1116,25 @@ export const RentalsView: React.FC = () => {
 
                     {/* Acciones (Renderizadas condicionalmente si hay teléfono/activa) */}
                     <div className="border-t border-gray-100 pt-4">
-                      {selectedRental.customer_phone && (
-                        <div className="space-y-2 mb-2">
-                          <button className="w-full py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-medium rounded-md transition-colors flex items-center justify-center gap-1.5 shadow-sm">
-                            <MessageCircle className="w-3.5 h-3.5" /> Abrir WhatsApp
-                          </button>
-                        </div>
-                      )}
+                      {selectedRental.customer_phone &&
+                        (() => {
+                          const customerPart = selectedRental.customer_name ? `Hola ${selectedRental.customer_name}, ` : '';
+                          const projectPart = selectedRental.project_name ? ` (${selectedRental.project_name})` : '';
+                          const defaultMsg = `${customerPart}te escribo de Creativos Espacios sobre tu renta${projectPart}.`;
+                          const waUrl = buildWhatsAppUrl(selectedRental.customer_phone, defaultMsg);
+                          return (
+                            <div className="space-y-2 mb-2">
+                              <a
+                                href={waUrl || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block text-center w-full py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-medium rounded-md transition-colors flex items-center justify-center gap-1.5 shadow-sm no-underline"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" /> Abrir WhatsApp
+                              </a>
+                            </div>
+                          );
+                        })()}
                       
                       {selectedRental.status === 'active' && (
                         <div className="grid grid-cols-3 gap-2">
@@ -1179,6 +1225,7 @@ export const RentalsView: React.FC = () => {
       <RentalFormModal 
         isOpen={isFormOpen} 
         onClose={() => { setIsFormOpen(false); setFormInitialFocus(undefined); }} 
+        existingRentals={rentals}
         initialData={editingRentalId ? rentals.find(r => r.id === editingRentalId) || null : null}
         initialItems={editingRentalId ? rentals.find(r => r.id === editingRentalId)?.items || [] : []}
         initialFocus={formInitialFocus}

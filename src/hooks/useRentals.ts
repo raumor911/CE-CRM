@@ -2,6 +2,10 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { Rental, RentalItem, RentalActivity } from '../types';
 import { useAuth } from '../context/AuthContext';
+import {
+  cleanCustomerName,
+  normalizeCustomerPhone,
+} from '../utils/customerIdentity';
 
 export type RentalWithItems = Rental & {
   items: RentalItem[];
@@ -45,23 +49,69 @@ export const useRentals = () => {
   ) => {
     setLoading(true);
     setError(null);
+
+    const subtotalMonthly = itemsData.reduce(
+      (total, item) =>
+        total + Number(item.subtotal_monthly || 0) * Number(item.quantity || 1),
+      0
+    );
+
+    const taxMonthly = itemsData.reduce(
+      (total, item) => total + Number(item.tax_monthly || 0),
+      0
+    );
+
+    const monthlyTotal = itemsData.reduce(
+      (total, item) => total + Number(item.monthly_total || 0),
+      0
+    );
+
+    const rentalPayload = {
+      ...rentalData,
+
+      customer_name: cleanCustomerName(
+        rentalData.customer_name
+      ),
+
+      customer_phone:
+        normalizeCustomerPhone(rentalData.customer_phone) || null,
+
+      contractual_end_date:
+        rentalData.contractual_end_date || null,
+
+      status: 'active',
+      payment_status: 'current',
+      currency: 'MXN',
+
+      subtotal_monthly: subtotalMonthly,
+      tax_monthly: taxMonthly,
+      monthly_amount_total: monthlyTotal,
+
+      short_term_exception: false,
+      historical_missing_end_date: false,
+
+      created_by: user?.id,
+      updated_by: user?.id,
+    };
+
+    let createdRental: Rental | null = null;
+
     try {
-      // 1. Insertar la renta
       const { data: rental, error: rentalError } = await supabase
         .from('rentals')
-        .insert([{
-          ...rentalData,
-          created_by: user?.id,
-          updated_by: user?.id
-        }])
+        .insert([rentalPayload])
         .select()
         .single();
 
-      if (rentalError) throw rentalError;
+      if (rentalError) {
+        const msg = rentalError.message || '';
+        console.error('Error insertando rentals:', rentalError);
+        throw new Error('No fue posible crear la renta. Verifica los datos e intenta nuevamente.');
+      }
 
+      createdRental = rental;
       let insertedItems: RentalItem[] = [];
 
-      // 2. Insertar los items relacionados si existen
       if (itemsData && itemsData.length > 0) {
         const itemsToInsert = itemsData.map(item => ({
           ...item,
@@ -74,9 +124,13 @@ export const useRentals = () => {
           .select();
 
         if (itemsError) {
-          // Compensación: eliminar la renta creada si falla la inserción de items
-          await supabase.from('rentals').delete().eq('id', rental.id);
-          throw itemsError;
+          try {
+            await supabase.from('rentals').delete().eq('id', rental.id);
+          } catch (rollbackErr) {
+            console.error('Error en compensación al eliminar renta huérfana:', rollbackErr);
+          }
+          console.error('Error insertando rental_items:', itemsError);
+          throw new Error('La renta no fue registrada porque ocurrió un problema al guardar los equipos.');
         }
         insertedItems = items || [];
       }
@@ -86,13 +140,19 @@ export const useRentals = () => {
         items: insertedItems
       };
 
-      // Actualizar el estado local
-      setRentals(prev => [newRentalWithItems, ...prev]);
+      setRentals(previousRentals => [
+        {
+          ...createdRental!,
+          items: insertedItems,
+        },
+        ...previousRentals,
+      ]);
 
-      // Registrar actividad de creación
-      await addRentalActivity(rental.id, 'created', 'Renta creada exitosamente', { after: rentalData });
-
-      // Pago inicial cubierto, ensureCurrentMonthPayments manejará los meses siguientes
+      try {
+        await addRentalActivity(rental.id, 'created', 'Renta creada exitosamente', { after: rentalPayload });
+      } catch (activityError) {
+        console.error('La renta fue creada, pero no se registró la actividad:', activityError);
+      }
 
       return newRentalWithItems;
     } catch (err: any) {

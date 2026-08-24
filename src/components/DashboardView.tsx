@@ -8,6 +8,7 @@ import {
 import { Lead } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 import { useRentals } from '../hooks/useRentals';
+import { useClosedSales } from '../hooks/useClosedSales';
 import { motion, AnimatePresence } from 'motion/react';
 
 const DAYS_TO_STALE = 7;
@@ -211,16 +212,40 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
 
   const { rentals, fetchRentals } = useRentals();
 
+  const {
+    closedSales,
+    loading: closedSalesLoading,
+    loaded: closedSalesLoaded,
+    error: closedSalesError,
+    fetchClosedSales
+  } = useClosedSales();
+
   useEffect(() => {
     fetchRentals();
   }, [fetchRentals]);
+
+  useEffect(() => {
+    fetchClosedSales();
+  }, [fetchClosedSales]);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') {
+        fetchClosedSales();
+      }
+    };
+
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [fetchClosedSales]);
   
   const activeLeads = useMemo(() => 
     leads.filter(l => !l.is_archived && l.stage !== 'Cierre'), 
-  [leads]);
-  
-  const closedLeads = useMemo(() => 
-    leads.filter(l => !l.is_archived && l.stage === 'Cierre'), 
   [leads]);
   
   const allNonArchived = useMemo(() => 
@@ -240,16 +265,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
   [filteredActiveLeadsForPipeline]);
   
   // 🔒 VALOR VENTA CERRADA (con periodo calendario)
-  const filteredClosedLeads = useMemo(() => {
-    return closedLeads.filter(l => {
-      const refDate = l.signed_at || l.last_activity;
-      return isDateInPeriod(refDate, salesPeriodType, salesPeriodValue);
-    });
-  }, [closedLeads, salesPeriodType, salesPeriodValue]);
+  const filteredClosedSales = useMemo(() => {
+    return closedSales.filter(sale =>
+      isDateInPeriod(
+        sale.signed_at,
+        salesPeriodType,
+        salesPeriodValue
+      )
+    );
+  }, [
+    closedSales,
+    salesPeriodType,
+    salesPeriodValue
+  ]);
 
-  const closedValue = useMemo(() => 
-    filteredClosedLeads.reduce((sum, l) => sum + (l.monto_anticipo_real || l.budget || 0), 0), 
-  [filteredClosedLeads]);
+  const closedValue = useMemo(
+    () =>
+      filteredClosedSales.reduce((total, sale) => {
+        const actualAmount = Number(sale.monto_anticipo_real ?? 0);
+        const contractValue = Number(sale.budget ?? 0);
+
+        const value =
+          Number.isFinite(actualAmount) && actualAmount > 0
+            ? actualAmount
+            : Number.isFinite(contractValue) && contractValue > 0
+              ? contractValue
+              : 0;
+
+        return total + value;
+      }, 0),
+    [filteredClosedSales]
+  );
   
   const weightedForecast = useMemo(() => 
     // Ajuste lógico: El pronóstico ponderado debe reflejar el MISMO periodo que el Valor Pipeline
@@ -272,31 +318,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
   [activeLeads, now]);
   
   // ⏱️ TIEMPO PROMEDIO DE CICLO (solo leads cerrados)
+  const validCycleSales = useMemo(() => {
+    return filteredClosedSales.filter(sale => {
+      if (!sale.created_at || !sale.signed_at) return false;
+
+      const start = new Date(sale.created_at).getTime();
+      const end = new Date(sale.signed_at).getTime();
+
+      return (
+        Number.isFinite(start) &&
+        Number.isFinite(end) &&
+        end >= start
+      );
+    });
+  }, [filteredClosedSales]);
+
   const avgCycleDays = useMemo(() => {
-    if (closedLeads.length === 0) return 0;
-    const totalDays = closedLeads.reduce((sum, l) => {
-      const start = l.created_at || l.stage_entry_timestamp || l.last_activity;
-      const end = l.signed_at || l.last_activity;
-      return sum + getDaysBetween(start, end);
-    }, 0);
-    return Math.round(totalDays / closedLeads.length);
-  }, [closedLeads]);
+    if (validCycleSales.length === 0) return null;
+
+    const totalDays = validCycleSales.reduce(
+      (total, sale) =>
+        total +
+        getDaysBetween(
+          sale.created_at!,
+          sale.signed_at
+        ),
+      0
+    );
+
+    return Math.round(totalDays / validCycleSales.length);
+  }, [validCycleSales]);
   
   // 📊 DISTRIBUCIÓN POR ETAPA
   const stageBreakdown = useMemo(() => {
-    const stages = ['Ingreso', 'Briefing', 'Propuesta', 'Cierre'] as const;
+    const stages = ['Ingreso', 'Briefing', 'Propuesta'] as const;
     return stages.map(s => {
       const stageLeads = leads.filter(l => l.stage === s && !l.is_archived);
       return {
         stage: s,
         count: stageLeads.length,
-        value: stageLeads.reduce((sum, l) => sum + (l.budget || 0), 0),
-        avgDays: stageLeads.length > 0 
-          ? Math.round(stageLeads.reduce((s2, l) => s2 + getDaysAgo(l.last_activity), 0) / stageLeads.length)
-          : 0
+        value: stageLeads.reduce((sum, l) => sum + (l.budget || 0), 0)
       };
     });
-  }, [leads, now]);
+  }, [leads]);
   
   const currentMonthName = useMemo(() => {
     if (pipelinePeriodType === 'monthly') {
@@ -390,8 +454,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
     },
     { 
       label: 'Venta Cerrada', 
-      value: formatCurrency(closedValue), 
-      sub: `${filteredClosedLeads.length} contrato${filteredClosedLeads.length === 1 ? '' : 's'}`,
+      value: closedSalesLoading
+        ? '—'
+        : formatCurrency(closedValue), 
+      sub: closedSalesError
+        ? 'Información no disponible'
+        : `${filteredClosedSales.length} ${
+            filteredClosedSales.length === 1
+              ? 'contrato'
+              : 'contratos'
+          }`,
       periodKey: 'sales' as const,
       periodType: salesPeriodType,
       periodValue: salesPeriodValue,
@@ -411,8 +483,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
     },
     { 
       label: 'Ciclo Promedio', 
-      value: closedLeads.length > 0 ? `${avgCycleDays} días` : 'N/D', 
-      sub: closedLeads.length > 0 ? `${briefingProgress}% checklist` : 'Primer cierre pendiente',
+      value: closedSalesLoading
+        ? '—'
+        : avgCycleDays !== null
+          ? `${avgCycleDays} días`
+          : 'N/D', 
+      sub: closedSalesError
+        ? 'Información no disponible'
+        : validCycleSales.length > 0
+          ? `${validCycleSales.length} cierres del periodo`
+          : 'Sin cierres en el periodo',
       icon: Clock, 
       color: 'text-amber-600', 
       bg: 'bg-amber-50' 
@@ -583,8 +663,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
                       "w-2.5 h-2.5 rounded-full",
                       row.stage === 'Ingreso' ? 'bg-blue-500' :
                       row.stage === 'Briefing' ? 'bg-amber-500' :
-                      row.stage === 'Propuesta' ? 'bg-indigo-500' :
-                      'bg-emerald-500'
+                      'bg-indigo-500'
                     )} />
                     <span className="text-xs font-bold text-slate-700">{row.stage}</span>
                     <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
@@ -593,9 +672,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-black text-slate-900">{formatCurrency(row.value)}</span>
-                    <span className="text-[9px] font-bold text-slate-400">
-                      ⏱ {row.avgDays}d promedio
-                    </span>
                   </div>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

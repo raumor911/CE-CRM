@@ -58,6 +58,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   const [archiveReason, setArchiveReason] = useState('');
   const [isArchiving, setIsArchiving] = useState(false);
   const [isUpdatingChecklist, setIsUpdatingChecklist] = useState<string | null>(null);
+  const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
 
   const archiveReasons = [
     { id: 'Converted', label: 'Cliente convertido' },
@@ -237,6 +238,45 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
 
   const SENTIMENTS: Lead['sentiment_label'][] = ['Entusiasta', 'Dudoso', 'Preocupado'];
 
+  const isFinancialConfirmationComplete = 
+    lead.payment_confirmed === true && 
+    Boolean(lead.contract_signed_at);
+
+  const getPaymentConfirmationLabel = (category: Lead['category']) => {
+    if (
+      category === 'Proyecto' ||
+      category === 'Renta Contenedor' ||
+      category === 'Renta Oficina 20 ft'
+    ) {
+      return '¿Adelanto confirmado?';
+    }
+
+    return '¿Pago confirmado?';
+  };
+
+  const handleConfirmPayment = async () => {
+    if (isFinancialConfirmationComplete || isConfirmingPayment) return;
+
+    setIsConfirmingPayment(true);
+
+    try {
+      const confirmedAt = lead.contract_signed_at || new Date().toISOString();
+
+      const updatedLead = await onUpdate(lead.id, {
+        payment_confirmed: true,
+        contract_signed_at: confirmedAt
+      });
+
+      if (!updatedLead) {
+        return;
+      }
+    } catch (error) {
+      console.error('No fue posible confirmar el pago:', error);
+    } finally {
+      setIsConfirmingPayment(false);
+    }
+  };
+
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
     const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario';
@@ -282,11 +322,11 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
       await onUpdate(lead.id, { 
         payment_confirmed: true, 
         monto_anticipo_real: numVal, 
-        signed_at: new Date().toISOString(), // Sello de tiempo 
+        contract_signed_at: new Date().toISOString(), // Sello de tiempo 
         stage: 'Cierre', // Movimiento automático 
         last_activity: new Date().toISOString()
       }); 
-      console.log("Hito financiero registrado y sellado con timestamp en signed_at");
+      console.log("Hito financiero registrado y sellado con timestamp en contract_signed_at");
     } catch (error) { 
       console.error("Error en la transacción financiera:", error); 
     } 
@@ -564,6 +604,66 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
           </button>
         ))}
               </div>
+            </div>
+
+            {/* 4. CONFIRMACIÓN FINANCIERA */}
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                Confirmación Financiera
+              </h3>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmPayment();
+                }}
+                disabled={isFinancialConfirmationComplete || isConfirmingPayment}
+                className={cn(
+                  "w-full p-4 rounded-2xl border-2 transition-all duration-200 flex items-center justify-between shadow-sm group",
+                  isFinancialConfirmationComplete
+                    ? "bg-emerald-50 border-emerald-200 cursor-not-allowed"
+                    : isConfirmingPayment
+                      ? "bg-zinc-100 border-zinc-200 text-zinc-400 cursor-wait"
+                      : "bg-white border-zinc-200 hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer"
+                )}
+              >
+                <div className="flex flex-col items-start gap-1">
+                  <span className={cn(
+                    "text-sm font-black tracking-tight",
+                    isFinancialConfirmationComplete ? "text-emerald-800" :
+                    isConfirmingPayment ? "text-zinc-500" :
+                    "text-zinc-700 group-hover:text-emerald-700"
+                  )}>
+                    {getPaymentConfirmationLabel(lead.category)}
+                  </span>
+                  {isFinancialConfirmationComplete && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">
+                      Confirmado
+                    </span>
+                  )}
+                  {isConfirmingPayment && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-1">
+                      <Loader2 size={10} className="animate-spin" /> Procesando...
+                    </span>
+                  )}
+                </div>
+                <div className={cn(
+                  "w-8 h-8 rounded-xl border flex items-center justify-center transition-all",
+                  isFinancialConfirmationComplete
+                    ? "bg-emerald-500 border-emerald-500 text-white"
+                    : isConfirmingPayment
+                      ? "bg-zinc-200 border-zinc-200 text-zinc-500"
+                      : "bg-white border-zinc-300 group-hover:border-emerald-400 group-hover:bg-emerald-100"
+                )}>
+                  {isFinancialConfirmationComplete ? (
+                    <CheckCircle2 size={18} />
+                  ) : isConfirmingPayment ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={18} className="text-transparent group-hover:text-emerald-500/50" />
+                  )}
+                </div>
+              </button>
             </div>
 
             {/* 5. ACCIONES FINALES (Botones Blindados) */}

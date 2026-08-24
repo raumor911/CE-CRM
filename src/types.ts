@@ -32,7 +32,7 @@ export interface Lead {
   user_id?: string;
   payment_confirmed?: boolean;      // TRUE cuando se confirma el adelanto
   monto_anticipo_real?: number;     // Monto real depositado
-  signed_at?: string;               // Timestamp de la firma/cierre
+  contract_signed_at?: string;      // Timestamp real en base de datos
 }
 
 export interface LeadDocument {
@@ -42,6 +42,72 @@ export interface LeadDocument {
   file_path: string;
   file_size: number;
   file_type: string;
+  created_at: string;
+}
+
+export type ProductType = 'Oficina' | '20 DC' | '40 DC' | '40 HC';
+export type ProductCondition = 'Nuevo' | 'Usado';
+export type ProductLocation = 'Patio principal' | 'Taller' | 'Instalaciones del cliente' | 'Otra ubicación';
+export type ProductOperationalStatus = 'Disponible' | 'Reservada' | 'Rentada' | 'En modificación';
+
+export interface Product {
+  id: string;
+  product_type: ProductType;
+  internal_id: string;
+  physical_number?: string;
+  condition: ProductCondition;
+  location: ProductLocation;
+  location_detail?: string;
+  operational_status: ProductOperationalStatus;
+  available_for_sale: boolean;
+  available_for_rent: boolean;
+  available_for_modification: boolean;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  active_assignment?: {
+    rental_id: string;
+    assigned_at: string;
+    rental: {
+      customer_name: string;
+      project_name: string | null;
+    };
+  };
+}
+
+export interface InventoryAssignment {
+  id: string;
+  rental_id: string;
+  inventory_product_id: string;
+  assigned_at: string;
+  released_at?: string;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface ProductRegistrationData {
+  product_type: ProductType;
+  physical_number?: string;
+  condition: ProductCondition;
+  location: ProductLocation;
+  location_detail?: string;
+  operational_status: ProductOperationalStatus;
+  available_for_sale: boolean;
+  available_for_rent: boolean;
+  available_for_modification: boolean;
+  notes?: string;
+  rental_id?: string | null;
+}
+
+export interface InventoryActivity {
+  id: string;
+  product_id: string;
+  activity_type: string;
+  description: string;
+  previous_data?: any;
+  created_by?: string;
   created_at: string;
 }
 
@@ -128,4 +194,15 @@ export interface LeadActivity {
   type: 'Llamada' | 'WhatsApp' | 'Cita' | 'Diseño' | 'Presupuesto' | 'Nota';
   description: string;
   created_at: string;
+}
+
+export interface ExistingRentalCustomer {
+  key: string;
+  normalizedName: string;
+  customerName: string;
+  primaryPhone: string | null;
+  phones: string[];
+  rentalCount: number;
+  activeRentalCount: number;
+  lastRentalAt: string;
 }
