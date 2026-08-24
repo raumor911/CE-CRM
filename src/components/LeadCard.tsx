@@ -78,13 +78,13 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
       const updates: Partial<Lead> = {
         payment_confirmed: true,
         monto_anticipo_real: amount,
-        signed_at: new Date().toISOString(),
+        contract_signed_at: new Date().toISOString(),
         last_activity: new Date().toISOString()
       };
 
       try {
         onUpdateLead(lead.id, updates);
-        console.log("Hito financiero registrado y sellado con timestamp en signed_at");
+        console.log("Hito financiero registrado y sellado con timestamp en contract_signed_at");
       } catch (error) {
         console.error("Error en la transacción financiera:", error);
       }

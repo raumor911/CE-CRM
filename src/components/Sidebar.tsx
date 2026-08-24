@@ -12,11 +12,11 @@ import {
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { BrandConfig } from '../config/branding';
-import { RentasIcon } from './icons/BrandIcons';
+import { RentasIcon, ContainerIcon } from './icons/BrandIcons';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'settings';
-  onViewChange: (view: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'settings') => void;
+  currentView: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'settings';
+  onViewChange: (view: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'settings') => void;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
 }
@@ -33,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'pipeline', label: 'Pipeline', icon: Kanban },
     { id: 'rentals', label: 'Rentas', icon: RentasIcon },
+    { id: 'inventory', label: 'Inventario', icon: ContainerIcon },
     { id: 'directory', label: 'Directorio', icon: Table },
     { id: 'settings', label: 'Ajustes', icon: Settings },
   ] as const;

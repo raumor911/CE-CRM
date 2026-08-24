@@ -4,6 +4,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { DashboardView } from './components/DashboardView';
 import { DirectoryView } from './components/DirectoryView';
 import { RentalsView } from './components/RentalsView';
+import { InventoryView } from './components/InventoryView';
 import { SettingsView } from './components/SettingsView';
 import { Sidebar } from './components/Sidebar';
 import { NewLeadForm } from './components/modals/NewLeadForm';
@@ -25,7 +26,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
-  const [currentView, setCurrentView] = useState<'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'settings'>('pipeline');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'settings'>('pipeline');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -82,18 +83,25 @@ export default function App() {
 
   const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
     try {
-      console.log('App - Enviando actualización:', id, updates);
-      await supabaseUpdateLead(id, { ...updates, last_activity: new Date().toISOString() });
-      showToast("Lead actualizado", "success");
-    } catch (error: any) {
-      console.error("Error al actualizar lead:", error);
-      const errorMessage = error.details || error.message || "Error al actualizar el lead";
-      showToast(errorMessage, "error");
-      
-      // Si el error es de constraint, lanzamos un alert para que sea ineludible
-      if (errorMessage.includes('logic_vantage_shield')) {
-        alert(`🚨 ERROR DE NEGOCIO (Vantage Shield):\n\nLa base de datos rechazó el cambio a Cierre. \n\nDetalle: ${errorMessage}`);
+      const updatedLead = await supabaseUpdateLead(id, { 
+        ...updates, 
+        last_activity: new Date().toISOString() 
+      });
+
+      if (!updatedLead) {
+        throw new Error('Supabase no confirmó la actualización del lead');
       }
+
+      showToast('Lead actualizado', 'success');
+      return updatedLead;
+    } catch (error: any) {
+      const errorMessage = 
+        error.details || 
+        error.message || 
+        'Error al actualizar el lead';
+
+      showToast(errorMessage, 'error');
+      return null;
     }
   };
 
@@ -142,7 +150,8 @@ export default function App() {
                 {currentView === 'pipeline' ? 'Pipeline Kanban' : 
                  currentView === 'dashboard' ? '' :
                  currentView === 'directory' ? 'Directorio' :
-                 currentView === 'rentals' ? 'Rentas' : 'Ajustes'}
+                 currentView === 'rentals' ? 'Rentas' :
+                 currentView === 'inventory' ? 'Inventario' : 'Ajustes'}
               </h1>
               {currentView === 'pipeline' && (
                 <button 
@@ -192,6 +201,7 @@ export default function App() {
                   />
                 )}
                 {currentView === 'rentals' && <RentalsView />}
+                {currentView === 'inventory' && <InventoryView />}
                 {currentView === 'settings' && <SettingsView />}
               </motion.div>
             </AnimatePresence>
