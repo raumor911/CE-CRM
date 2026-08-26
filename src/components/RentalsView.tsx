@@ -35,7 +35,7 @@ import {
   ChevronRight,
   CornerDownRight
 } from 'lucide-react';
-import { formatCurrency, buildWhatsAppUrl } from '../lib/utils';
+import { formatCurrency, buildWhatsAppUrl, formatLocalDate, formatDateTime, formatShortDate, parseLocalDate } from '../lib/utils';
 import {
   cleanCustomerName,
   normalizeCustomerName,
@@ -55,33 +55,9 @@ interface UpcomingExpiration {
   urgency: 'red' | 'orange' | 'yellow';
 }
 
-// Date utility to avoid timezone shifts
-const parseLocalDate = (dateStr?: string | null): Date | null => {
-  if (!dateStr) return null;
-  const parts = dateStr.split('T')[0].split('-');
-  if (parts.length !== 3) return null;
-  const [year, month, day] = parts.map(Number);
-  return new Date(year, month - 1, day);
-};
 
-const formatLocalDate = (dateStr?: string | null): string => {
-  const date = parseLocalDate(dateStr);
-  if (!date) return 'Sin registrar';
-  return format(date, 'dd/MM/yyyy');
-};
 
-const formatDateTime = (dateStr?: string | null): string => {
-  if (!dateStr) return 'Sin registrar';
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return 'Sin registrar';
-  return format(date, 'dd/MM/yyyy HH:mm');
-};
 
-const formatShortDate = (dateStr?: string | null): string => {
-  const date = parseLocalDate(dateStr);
-  if (!date) return '-';
-  return format(date, 'dd MMM', { locale: es });
-};
 
 export const RentalsView: React.FC = () => {
   const { 

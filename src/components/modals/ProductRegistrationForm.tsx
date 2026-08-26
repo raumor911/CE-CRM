@@ -186,7 +186,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
           <div>
-            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Registrar producto</h2>
+            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">REGISTRO</h2>
             <p className="text-xs text-slate-500 font-medium">Alta manual de activos al inventario</p>
           </div>
           <button 
@@ -533,7 +533,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
             ) : (
               <>
                 <Save size={16} />
-                Registrar producto
+                REGISTRO
               </>
             )}
           </button>

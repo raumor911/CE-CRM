@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Package, Search, Filter, Loader2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ProductRegistrationForm } from './modals/ProductRegistrationForm';
+import { ProductDetailPanel } from './inventory/ProductDetailPanel';
 import { useInventory } from '../hooks/useInventory';
 import { 
   ProductType, 
@@ -68,6 +69,12 @@ export const InventoryView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<InventoryFilters>(DEFAULT_FILTERS);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+
+  const selectedProduct = React.useMemo(
+    () => products.find(p => p.id === selectedProductId) || null,
+    [products, selectedProductId]
+  );
 
   useEffect(() => {
     fetchProducts();
@@ -142,7 +149,7 @@ export const InventoryView: React.FC = () => {
             onClick={() => setIsFormOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
           >
-            <Plus className="w-4 h-4" /> Registrar producto
+            <Plus className="w-4 h-4" /> REGISTRO
           </button>
         </div>
 
@@ -310,7 +317,7 @@ export const InventoryView: React.FC = () => {
                   onClick={() => setIsFormOpen(true)}
                   className="mt-6 flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-all"
                 >
-                  Registrar producto
+                  REGISTRO
                 </button>
               )}
             </div>
@@ -333,7 +340,11 @@ export const InventoryView: React.FC = () => {
                       key={product.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="hover:bg-slate-50/50 transition-colors group"
+                      onClick={() => setSelectedProductId(product.id)}
+                      className={cn(
+                        "hover:bg-slate-50/50 transition-colors group cursor-pointer",
+                        selectedProductId === product.id ? "bg-indigo-50/50" : ""
+                      )}
                     >
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
@@ -412,6 +423,16 @@ export const InventoryView: React.FC = () => {
           />
         )}
       </AnimatePresence>
+
+      {/* Detail Panel */}
+      <ProductDetailPanel
+        product={selectedProduct}
+        isOpen={Boolean(selectedProduct)}
+        onClose={() => setSelectedProductId(null)}
+        onEdit={(product) => {
+          console.log('Edit product:', product);
+        }}
+      />
     </div>
   );
 };

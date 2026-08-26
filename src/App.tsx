@@ -19,22 +19,40 @@ import { useAuth } from './context/AuthContext';
 import { AuthLayout } from './components/auth/AuthLayout';
 import { LoginForm } from './components/auth/LoginForm';
 import { SignUpForm } from './components/auth/SignUpForm';
+import { ForgotPasswordForm } from './components/auth/ForgotPasswordForm';
+import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
+
+type AuthMode = 'login' | 'signup' | 'forgot-password' | 'reset-password';
 
 export default function App() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, signOut, isPasswordRecovery, session, clearPasswordRecovery } = useAuth();
   const { leads, loading, createLead: supabaseCreateLead, updateLead: supabaseUpdateLead } = useSupabaseLeads();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
   const [currentView, setCurrentView] = useState<'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'settings'>('pipeline');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const [initialEmail, setInitialEmail] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const { analyzeSentiment } = useLeadAutomation();
+
+  const urlRequestsRecovery = new URLSearchParams(window.location.search).get('mode') === 'reset-password';
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleRecoverySuccess = () => {
+    // Clear the URL parameter
+    const url = new URL(window.location.href);
+    url.searchParams.delete('mode');
+    window.history.replaceState({}, '', url);
+
+    clearPasswordRecovery();
+    setAuthMode('login');
+    showToast('Contraseña actualizada correctamente', 'success');
   };
 
   const handleCreateLead = async (data: any) => {
@@ -58,7 +76,7 @@ export default function App() {
 
       // 2. INSERCIÓN EN SUPABASE
       const createdLead = await supabaseCreateLead(newLeadData);
-      
+
       if (createdLead) {
         // 3. ANÁLISIS DE SENTIMIENTO (Opcional)
         try {
@@ -83,9 +101,9 @@ export default function App() {
 
   const handleUpdateLead = async (id: string, updates: Partial<Lead>) => {
     try {
-      const updatedLead = await supabaseUpdateLead(id, { 
-        ...updates, 
-        last_activity: new Date().toISOString() 
+      const updatedLead = await supabaseUpdateLead(id, {
+        ...updates,
+        last_activity: new Date().toISOString()
       });
 
       if (!updatedLead) {
@@ -95,9 +113,9 @@ export default function App() {
       showToast('Lead actualizado', 'success');
       return updatedLead;
     } catch (error: any) {
-      const errorMessage = 
-        error.details || 
-        error.message || 
+      const errorMessage =
+        error.details ||
+        error.message ||
         'Error al actualizar el lead';
 
       showToast(errorMessage, 'error');
@@ -114,16 +132,51 @@ export default function App() {
     );
   }
 
-  if (!user) {
+  if (!user || isPasswordRecovery || urlRequestsRecovery) {
     return (
-      <AuthLayout 
-        title={authMode === 'login' ? 'Bienvenido de Nuevo' : 'Crear Cuenta'} 
-        subtitle={authMode === 'login' ? 'Ingresa tus credenciales para acceder' : 'Regístrate para gestionar tus leads'}
+      <AuthLayout
+        title={
+          isPasswordRecovery || urlRequestsRecovery ? 'Seguridad' :
+          authMode === 'login' ? 'Bienvenido de Nuevo' :
+          authMode === 'signup' ? 'Crear Cuenta' :
+          'Recuperar Acceso'
+        }
+        subtitle={
+          isPasswordRecovery || urlRequestsRecovery ? 'Actualiza tus credenciales' :
+          authMode === 'login' ? 'Ingresa tus credenciales para acceder' :
+          authMode === 'signup' ? 'Regístrate para gestionar tus leads' :
+          'Te enviaremos un enlace de seguridad'
+        }
       >
-        {authMode === 'login' ? (
-          <LoginForm onToggleMode={() => setAuthMode('signup')} />
-        ) : (
+        {isPasswordRecovery || urlRequestsRecovery ? (
+          <ResetPasswordForm
+            session={session}
+            onSuccess={handleRecoverySuccess}
+            onRequestNewLink={() => {
+              // Si el link falló, volvemos a solicitar uno
+              clearPasswordRecovery();
+              const url = new URL(window.location.href);
+              url.searchParams.delete('mode');
+              window.history.replaceState({}, '', url);
+              setAuthMode('forgot-password');
+            }}
+          />
+        ) : authMode === 'login' ? (
+          <LoginForm
+            onToggleMode={() => setAuthMode('signup')}
+            onForgotPassword={(email) => {
+              setInitialEmail(email || '');
+              setAuthMode('forgot-password');
+            }}
+            initialEmail={initialEmail}
+          />
+        ) : authMode === 'signup' ? (
           <SignUpForm onToggleMode={() => setAuthMode('login')} />
+        ) : (
+          <ForgotPasswordForm
+            onBackToLogin={() => setAuthMode('login')}
+            initialEmail={initialEmail}
+          />
         )}
       </AuthLayout>
     );
@@ -131,8 +184,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-bg-main text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex">
-      <Sidebar 
-        currentView={currentView} 
+      <Sidebar
+        currentView={currentView}
         onViewChange={setCurrentView}
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
@@ -147,14 +200,14 @@ export default function App() {
           <div className="flex items-center justify-between max-w-[1600px] mx-auto">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-black tracking-tight uppercase text-slate-900">
-                {currentView === 'pipeline' ? 'Pipeline Kanban' : 
+                {currentView === 'pipeline' ? 'Pipeline Kanban' :
                  currentView === 'dashboard' ? '' :
                  currentView === 'directory' ? 'Directorio' :
                  currentView === 'rentals' ? 'Rentas' :
                  currentView === 'inventory' ? 'Inventario' : 'Ajustes'}
               </h1>
               {currentView === 'pipeline' && (
-                <button 
+                <button
                   onClick={() => setIsModalOpen(true)}
                   className="bg-brand-primary hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all shadow-sm"
                 >
@@ -187,16 +240,16 @@ export default function App() {
                 className="h-full"
               >
                 {currentView === 'pipeline' && (
-                  <KanbanBoard 
-                    leads={leads} 
+                  <KanbanBoard
+                    leads={leads}
                     onUpdateLead={handleUpdateLead}
                     onSelectLead={(lead) => setSelectedLeadId(lead.id)}
                   />
                 )}
                 {currentView === 'dashboard' && <DashboardView leads={leads} />}
                 {currentView === 'directory' && (
-                  <DirectoryView 
-                    leads={leads} 
+                  <DirectoryView
+                    leads={leads}
                     onUpdateLead={handleUpdateLead}
                   />
                 )}
@@ -212,10 +265,10 @@ export default function App() {
       {/* Modals */}
       <AnimatePresence>
         {isModalOpen && (
-          <NewLeadForm 
+          <NewLeadForm
             isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)} 
-            onSubmit={handleCreateLead} 
+            onClose={() => setIsModalOpen(false)}
+            onSubmit={handleCreateLead}
           />
         )}
         {selectedLead && (
@@ -236,8 +289,8 @@ export default function App() {
             exit={{ opacity: 0, y: 20, x: '-50%' }}
             className={cn(
               "fixed bottom-8 left-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border backdrop-blur-md",
-              toast.type === 'success' 
-                ? "bg-emerald-500/90 text-white border-emerald-400/20" 
+              toast.type === 'success'
+                ? "bg-emerald-500/90 text-white border-emerald-400/20"
                 : "bg-rose-500/90 text-white border-rose-400/20"
             )}
           >

@@ -5,10 +5,12 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface LoginFormProps {
   onToggleMode: () => void;
+  onForgotPassword: (email?: string) => void;
+  initialEmail?: string;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
-  const [email, setEmail] = useState('');
+export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode, onForgotPassword, initialEmail = '' }) => {
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
       <div className="space-y-1.5">
         <div className="flex justify-between items-center px-1">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contraseña</label>
-          <button type="button" className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors">¿Olvidaste tu contraseña?</button>
+          <button 
+            type="button" 
+            onClick={() => onForgotPassword(email)}
+            className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
         </div>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
