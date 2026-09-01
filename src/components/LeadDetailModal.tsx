@@ -243,6 +243,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     Boolean(lead.contract_signed_at);
 
   const getPaymentConfirmationLabel = (category: Lead['category']) => {
+    if (isFinancialConfirmationComplete && lead.stage === 'Propuesta') {
+      return 'Completar cierre';
+    }
+
     if (
       category === 'Proyecto' ||
       category === 'Renta Contenedor' ||
@@ -255,23 +259,49 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   };
 
   const handleConfirmPayment = async () => {
-    if (isFinancialConfirmationComplete || isConfirmingPayment) return;
+    if (isConfirmingPayment || lead.stage === 'Cierre') return;
+
+    if (lead.stage !== 'Propuesta') {
+      alert('La oportunidad debe estar en Propuesta antes de avanzar a Cierre.');
+      return;
+    }
+
+    if ((lead.budget || 0) <= 0) {
+      alert('Primero debes registrar un presupuesto mayor a $0.');
+      return;
+    }
+
+    const confirmMessage = isFinancialConfirmationComplete 
+      ? '¿Deseas completar el cierre de esta oportunidad?'
+      : '¿Confirmas que el pago o adelanto fue recibido? La oportunidad pasará automáticamente a Cierre.';
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
 
     setIsConfirmingPayment(true);
 
     try {
-      const confirmedAt = lead.contract_signed_at || new Date().toISOString();
+      const updates: Partial<Lead> = isFinancialConfirmationComplete
+        ? {
+            stage: 'Cierre',
+            last_activity: new Date().toISOString()
+          }
+        : {
+            payment_confirmed: true,
+            contract_signed_at: lead.contract_signed_at ?? new Date().toISOString(),
+            stage: 'Cierre',
+            last_activity: new Date().toISOString()
+          };
 
-      const updatedLead = await onUpdate(lead.id, {
-        payment_confirmed: true,
-        contract_signed_at: confirmedAt
-      });
+      const updatedLead = await onUpdate(lead.id, updates);
 
-      if (!updatedLead) {
-        return;
+      if (!updatedLead || updatedLead.stage !== 'Cierre') {
+        throw new Error('Supabase no confirmó el cambio a Cierre.');
       }
-    } catch (error) {
-      console.error('No fue posible confirmar el pago:', error);
+    } catch (error: any) {
+      console.error('Error al procesar el cierre:', error);
+      alert(error.message || 'No fue posible completar el cierre. Verifica tu conexión.');
     } finally {
       setIsConfirmingPayment(false);
     }
@@ -630,11 +660,11 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 <div className="flex flex-col items-start gap-1">
                   <span className={cn(
                     "text-sm font-black tracking-tight",
-                    isFinancialConfirmationComplete ? "text-emerald-800" :
+                    lead.stage === 'Cierre' ? "text-emerald-800" :
                     isConfirmingPayment ? "text-zinc-500" :
                     "text-zinc-700 group-hover:text-emerald-700"
                   )}>
-                    {getPaymentConfirmationLabel(lead.category)}
+                    {lead.stage === 'Cierre' ? 'Venta cerrada' : getPaymentConfirmationLabel(lead.category)}
                   </span>
                   {isFinancialConfirmationComplete && (
                     <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">
@@ -649,18 +679,20 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 </div>
                 <div className={cn(
                   "w-8 h-8 rounded-xl border flex items-center justify-center transition-all",
-                  isFinancialConfirmationComplete
+                  lead.stage === 'Cierre'
                     ? "bg-emerald-500 border-emerald-500 text-white"
                     : isConfirmingPayment
                       ? "bg-zinc-200 border-zinc-200 text-zinc-500"
-                      : "bg-white border-zinc-300 group-hover:border-emerald-400 group-hover:bg-emerald-100"
+                      : isFinancialConfirmationComplete
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-500 group-hover:bg-emerald-100"
+                        : "bg-white border-zinc-300 group-hover:border-emerald-400 group-hover:bg-emerald-100"
                 )}>
-                  {isFinancialConfirmationComplete ? (
+                  {lead.stage === 'Cierre' ? (
                     <CheckCircle2 size={18} />
                   ) : isConfirmingPayment ? (
                     <Loader2 size={18} className="animate-spin" />
                   ) : (
-                    <CheckCircle2 size={18} className="text-transparent group-hover:text-emerald-500/50" />
+                    <CheckCircle2 size={18} className={cn(isFinancialConfirmationComplete ? "text-emerald-500" : "text-transparent group-hover:text-emerald-500/50")} />
                   )}
                 </div>
               </button>

@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext';
 
 interface LeadCardProps {
   lead: Lead;
-  onUpdateLead: (id: string, updates: Partial<Lead>) => void;
+  onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null> | void;
   onSelectLead: (lead: Lead) => void;
   isOverlay?: boolean;
 }

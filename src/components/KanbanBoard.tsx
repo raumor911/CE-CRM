@@ -21,11 +21,12 @@ import { useDroppable } from '@dnd-kit/core';
 import { Lead } from '../types';
 import { LeadCard } from './LeadCard';
 import { STAGES } from '../constants';
+import { validateLeadClosure } from '../lib/leadClosure';
 import { cn } from '../lib/utils';
 
 interface KanbanBoardProps {
   leads: Lead[];
-  onUpdateLead: (id: string, updates: Partial<Lead>) => void;
+  onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null> | void;
   onSelectLead: (lead: Lead) => void;
 }
 
@@ -113,7 +114,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     if (lead) setActiveLead(lead);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveLead(null);
     
@@ -148,24 +149,31 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
       
       if (lead && lead.stage !== newStage) {
         
-        // --- VALIDACIÓN VANTAGE SHIELD 2.0 --- 
-        if (newStage === 'Cierre') { 
-          const checklist = lead.checklist_briefing || { m2: false, deadlines: false }; 
-          const isChecklistComplete = checklist.m2 && checklist.deadlines; 
+        if (newStage === 'Cierre') {
+          // Si el pago ya está confirmado, permitir el arrastre directo
+          const financialComplete = lead.payment_confirmed === true && Boolean(lead.contract_signed_at);
           
-          if (!isChecklistComplete || lead.sentiment_label !== 'Entusiasta' || (lead.budget || 0) <= 0) { 
-            const missing = []; 
-            if (!isChecklistComplete) missing.push("Checklist de Briefing completo (2/2 puntos)"); 
-            if (lead.sentiment_label !== 'Entusiasta') missing.push("Sentimiento debe ser 'Entusiasta'"); 
-            if ((lead.budget || 0) <= 0) missing.push("Presupuesto debe ser mayor a 0"); 
-  
-            alert(`No se puede mover a 'Cierre' aún. Requisitos pendientes:\n\n- ${missing.join('\n- ')}`); 
-            return; 
-          } 
-        } 
-        // ------------------------------------- 
+          if (!financialComplete) {
+            const validation = validateLeadClosure(lead);
 
-        onUpdateLead(activeId, { stage: newStage as Lead['stage'] });
+            if (!validation.canClose) {
+              alert(
+                `Antes de cerrar esta oportunidad completa:\n\n- ${
+                  validation.missing.join('\n- ')
+                }`
+              );
+
+              onSelectLead(lead);
+              return;
+            }
+          }
+        }
+
+        const updatedLead = await onUpdateLead(activeId, { stage: newStage as Lead['stage'] });
+
+        if (!updatedLead) {
+          return;
+        }
       }
     }
   };
