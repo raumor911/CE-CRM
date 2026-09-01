@@ -41,7 +41,10 @@ const KanbanColumn: React.FC<{
 }> = ({ id, title, leads, onUpdateLead, onSelectLead }) => {
   const { setNodeRef, isOver } = useDroppable({ 
     id,
-    data: { stage: id } // Añadimos la etapa a los metadatos del droppable
+    data: { 
+      type: 'column',
+      stage: id 
+    }
   });
 
   const getStageColor = (stage: string) => {
@@ -121,60 +124,48 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     if (!over) return;
 
     const activeId = active.id as string;
-    const overId = over.id as string;
+    const lead = leads.find(l => l.id === activeId);
+    if (!lead) return;
 
-    // Determinar la etapa de destino de forma robusta
-    let newStage: string | undefined;
+    // Determinar la etapa de destino de forma exclusiva desde data.stage
+    const newStage = over.data.current?.stage as Lead['stage'] | undefined;
 
-    // 1. Intentar obtener la etapa desde los metadatos del droppable (columna)
-    if (over.data.current?.stage) {
-      newStage = over.data.current.stage;
-    } 
-    // 2. Si caímos sobre una tarjeta, buscar su etapa
-    else if (VALID_STAGES.includes(overId)) {
-      newStage = overId;
-    } else {
-      const targetLead = leads.find(l => l.id === overId);
-      newStage = targetLead?.stage;
+    if (!newStage || !VALID_STAGES.includes(newStage) || lead.stage === newStage) {
+      return;
     }
 
-    console.log('DragEnd - Cambio de etapa:', { 
-      lead: activeId, 
-      from: leads.find(l => l.id === activeId)?.stage, 
-      to: newStage 
-    });
+    // Reglas de transición estrictas
+    if (newStage === 'Cierre') {
+      // Bloquear saltos directos desde Ingreso o Briefing a Cierre
+      if (lead.stage === 'Ingreso' || lead.stage === 'Briefing') {
+        alert('Esta oportunidad debe avanzar primero a Propuesta antes de poder cerrarse.');
+        return;
+      }
 
-    if (newStage && VALID_STAGES.includes(newStage)) {
-      const lead = leads.find(l => l.id === activeId);
+      // Validar confirmación financiera para el paso Propuesta -> Cierre
+      const financialComplete = lead.payment_confirmed === true && Boolean(lead.contract_signed_at);
       
-      if (lead && lead.stage !== newStage) {
-        
-        if (newStage === 'Cierre') {
-          // Si el pago ya está confirmado, permitir el arrastre directo
-          const financialComplete = lead.payment_confirmed === true && Boolean(lead.contract_signed_at);
-          
-          if (!financialComplete) {
-            const validation = validateLeadClosure(lead);
+      if (!financialComplete) {
+        const validation = validateLeadClosure(lead);
 
-            if (!validation.canClose) {
-              alert(
-                `Antes de cerrar esta oportunidad completa:\n\n- ${
-                  validation.missing.join('\n- ')
-                }`
-              );
+        if (!validation.canClose) {
+          alert(
+            `Antes de cerrar esta oportunidad completa:\n\n- ${
+              validation.missing.join('\n- ')
+            }`
+          );
 
-              onSelectLead(lead);
-              return;
-            }
-          }
-        }
-
-        const updatedLead = await onUpdateLead(activeId, { stage: newStage as Lead['stage'] });
-
-        if (!updatedLead) {
+          onSelectLead(lead);
           return;
         }
       }
+    }
+
+    const updatedLead = await onUpdateLead(activeId, { stage: newStage });
+
+    if (!updatedLead) {
+      // Si la actualización falla, no hacemos nada más (la tarjeta se queda donde estaba)
+      return;
     }
   };
 

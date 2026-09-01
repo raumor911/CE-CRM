@@ -31,7 +31,14 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
     transform,
     transition,
     isDragging
-  } = useSortable({ id: lead.id, disabled: isOverlay });
+  } = useSortable({ 
+    id: lead.id, 
+    disabled: isOverlay,
+    data: {
+      type: 'lead',
+      stage: lead.stage
+    }
+  });
 
   const style = {
     transform: CSS.Translate.toString(transform),
