@@ -647,10 +647,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                   e.stopPropagation();
                   handleConfirmPayment();
                 }}
-                disabled={isFinancialConfirmationComplete || isConfirmingPayment}
+                disabled={isConfirmingPayment || lead.stage === 'Cierre'}
                 className={cn(
                   "w-full p-4 rounded-2xl border-2 transition-all duration-200 flex items-center justify-between shadow-sm group",
-                  isFinancialConfirmationComplete
+                  lead.stage === 'Cierre'
                     ? "bg-emerald-50 border-emerald-200 cursor-not-allowed"
                     : isConfirmingPayment
                       ? "bg-zinc-100 border-zinc-200 text-zinc-400 cursor-wait"
