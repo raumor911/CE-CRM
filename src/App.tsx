@@ -21,6 +21,7 @@ import { LoginForm } from './components/auth/LoginForm';
 import { SignUpForm } from './components/auth/SignUpForm';
 import { ForgotPasswordForm } from './components/auth/ForgotPasswordForm';
 import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
+import { PipelineFilter } from './components/PipelineFilter';
 
 type AuthMode = 'login' | 'signup' | 'forgot-password' | 'reset-password';
 
@@ -35,6 +36,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [initialEmail, setInitialEmail] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>(leads);
   const { analyzeSentiment } = useLeadAutomation();
 
   const urlRequestsRecovery = new URLSearchParams(window.location.search).get('mode') === 'reset-password';
@@ -240,11 +242,19 @@ export default function App() {
                 className="h-full"
               >
                 {currentView === 'pipeline' && (
-                  <KanbanBoard
-                    leads={leads}
-                    onUpdateLead={handleUpdateLead}
-                    onSelectLead={(lead) => setSelectedLeadId(lead.id)}
-                  />
+                  <div className="flex flex-col h-full">
+                    <PipelineFilter 
+                      leads={leads} 
+                      onFilterChange={setFilteredLeads} 
+                    />
+                    <div className="flex-1 overflow-hidden">
+                      <KanbanBoard
+                        leads={filteredLeads}
+                        onUpdateLead={handleUpdateLead}
+                        onSelectLead={(lead) => setSelectedLeadId(lead.id)}
+                      />
+                    </div>
+                  </div>
                 )}
                 {currentView === 'dashboard' && <DashboardView leads={leads} />}
                 {currentView === 'directory' && (

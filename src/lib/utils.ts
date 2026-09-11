@@ -44,6 +44,27 @@ export const formatShortDate = (dateStr?: string | null): string => {
   return format(date, 'dd MMM', { locale: es });
 };
 
+export const getDaysAgo = (dateStr?: string | null): number => {
+  if (!dateStr) return 0;
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return 0;
+  const diffTime = Math.abs(new Date().getTime() - date.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+export const isToday = (dateStr?: string | null): boolean => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const today = new Date();
+  return date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
+};
+
+export const isOverdue = (dateStr?: string | null, daysThreshold: number = 7): boolean => {
+  return getDaysAgo(dateStr) >= daysThreshold;
+};
+
 export function normalizePhoneForWhatsApp(rawPhone: string | null | undefined): string {
   if (!rawPhone) return '';
   let digits = rawPhone.replace(/\D/g, '');
