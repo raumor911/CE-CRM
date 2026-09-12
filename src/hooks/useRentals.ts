@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { Rental, RentalItem, RentalActivity } from '../types';
+import { Rental, RentalItem, RentalActivity, ProductOperationalStatus, ProductLocation } from '../types';
 import { useAuth } from '../context/AuthContext';
 import {
   cleanCustomerName,
   normalizeCustomerPhone,
 } from '../utils/customerIdentity';
+
+export type { RentalItem, RentalActivity };
 
 export type RentalWithItems = Rental & {
   items: RentalItem[];
@@ -43,9 +45,53 @@ export const useRentals = () => {
     }
   }, []);
 
+  const updateAssignedInventory = async (rentalId: string, status: ProductOperationalStatus, location?: ProductLocation) => {
+    try {
+      // 1. Buscar productos asignados a esta renta que no hayan sido liberados
+      const { data: assignments, error: assignError } = await supabase
+        .from('rental_inventory_assignments')
+        .select('inventory_product_id')
+        .eq('rental_id', rentalId)
+        .is('released_at', null);
+
+      if (assignError) throw assignError;
+      if (!assignments || assignments.length === 0) return;
+
+      const productIds = assignments.map(a => a.inventory_product_id);
+
+      // 2. Actualizar los productos
+      const updates: any = { 
+        operational_status: status,
+        updated_at: new Date().toISOString()
+      };
+      if (location) updates.location = location;
+
+      const { error: updateError } = await supabase
+        .from('inventory_products')
+        .update(updates)
+        .in('id', productIds);
+
+      if (updateError) throw updateError;
+
+      // 3. Registrar actividad en el inventario para cada producto
+      const activities = productIds.map(pid => ({
+        product_id: pid,
+        activity_type: 'rental_sync',
+        description: `Sincronización automática por estado de renta: ${status}${location ? ` (Ubicación: ${location})` : ''}`,
+        created_by: user?.id
+      }));
+
+      await supabase.from('inventory_activities').insert(activities);
+
+    } catch (err) {
+      console.error('Error syncing inventory with rental:', err);
+    }
+  };
+
   const createRental = async (
     rentalData: Partial<Omit<Rental, 'id' | 'created_at' | 'updated_at'>>,
-    itemsData: Omit<RentalItem, 'id' | 'rental_id' | 'created_at' | 'updated_at'>[]
+    itemsData: Omit<RentalItem, 'id' | 'rental_id' | 'created_at' | 'updated_at'>[],
+    inventoryProductIds?: string[]
   ) => {
     setLoading(true);
     setError(null);
@@ -133,6 +179,27 @@ export const useRentals = () => {
           throw new Error('La renta no fue registrada porque ocurrió un problema al guardar los equipos.');
         }
         insertedItems = items || [];
+      }
+
+      // Si se proporcionaron IDs de inventario, crear las asignaciones
+      if (inventoryProductIds && inventoryProductIds.length > 0) {
+        const assignments = inventoryProductIds.map(pid => ({
+          rental_id: rental.id,
+          inventory_product_id: pid,
+          assigned_at: new Date().toISOString(),
+          created_by: user?.id
+        }));
+
+        const { error: assignError } = await supabase
+          .from('rental_inventory_assignments')
+          .insert(assignments);
+
+        if (assignError) console.error('Error creando asignaciones de inventario:', assignError);
+      }
+
+      // Si la renta es activa, sincronizar inventario
+      if (rentalPayload.status === 'active') {
+        await updateAssignedInventory(rental.id, 'Rentada', 'Cliente');
       }
 
       const newRentalWithItems: RentalWithItems = {
@@ -482,6 +549,10 @@ export const useRentals = () => {
         ...(reason ? { completion_reason: reason } : {})
       };
       await updateRental(rentalId, updates);
+
+      // Sincronizar inventario: Rentado -> En retorno
+      await updateAssignedInventory(rentalId, 'En retorno');
+
       await addRentalActivity(
         rentalId, 
         'completed', 
@@ -507,6 +578,10 @@ export const useRentals = () => {
         cancellation_reason: reason 
       };
       await updateRental(rentalId, updates);
+
+      // Sincronizar inventario: En retorno (o Inspección dependiendo de la política)
+      await updateAssignedInventory(rentalId, 'En retorno');
+
       await addRentalActivity(
         rentalId, 
         'cancelled', 

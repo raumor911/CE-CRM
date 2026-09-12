@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Search, Bell, Menu, Plus, CheckCircle2, LogOut, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, Kanban, Table, Settings, Plus, CheckCircle2 } from 'lucide-react';
 import { KanbanBoard } from './components/KanbanBoard';
 import { DashboardView } from './components/DashboardView';
 import { DirectoryView } from './components/DirectoryView';
@@ -7,6 +7,8 @@ import { RentalsView } from './components/RentalsView';
 import { InventoryView } from './components/InventoryView';
 import { SettingsView } from './components/SettingsView';
 import { Sidebar } from './components/Sidebar';
+import { MobileHeader } from './components/layout/MobileHeader';
+import { BottomNavigation } from './components/layout/BottomNavigation';
 import { NewLeadForm } from './components/modals/NewLeadForm';
 import { LeadDetailModal } from './components/LeadDetailModal';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,8 +24,11 @@ import { SignUpForm } from './components/auth/SignUpForm';
 import { ForgotPasswordForm } from './components/auth/ForgotPasswordForm';
 import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
 import { PipelineFilter } from './components/PipelineFilter';
+import { BrandConfig } from './config/branding';
+import { RentasIcon, ContainerIcon } from './components/icons/BrandIcons';
 
 type AuthMode = 'login' | 'signup' | 'forgot-password' | 'reset-password';
+type ViewType = 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'settings';
 
 export default function App() {
   const { user, loading: authLoading, signOut, isPasswordRecovery, session, clearPasswordRecovery } = useAuth();
@@ -31,13 +36,27 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
-  const [currentView, setCurrentView] = useState<'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'settings'>('pipeline');
+  const [currentView, setCurrentView] = useState<ViewType>('pipeline');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [initialEmail, setInitialEmail] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>(leads);
+  const [activeMobileStage, setActiveMobileStage] = useState<string>('all');
   const { analyzeSentiment } = useLeadAutomation();
+
+  const mainNavItems = [
+    { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
+    { id: 'pipeline', label: 'Pipeline', icon: Kanban },
+    { id: 'rentals', label: 'Rentas', icon: RentasIcon },
+    { id: 'inventory', label: 'Stock', icon: ContainerIcon },
+  ] as const;
+
+  const secondaryNavItems = [
+    { id: 'directory', label: 'Directorio', icon: Table },
+    { id: 'settings', label: 'Ajustes', icon: Settings },
+  ] as const;
 
   const urlRequestsRecovery = new URLSearchParams(window.location.search).get('mode') === 'reset-password';
 
@@ -185,20 +204,28 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-main text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex">
-      <Sidebar
-        currentView={currentView}
-        onViewChange={setCurrentView}
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
+    <div className="min-h-screen bg-bg-main text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex flex-col md:flex-row">
+      <MobileHeader 
+        currentView={currentView} 
+        onPlusClick={currentView === 'pipeline' ? () => setIsModalOpen(true) : undefined} 
       />
 
+      <div className="hidden md:block">
+        <Sidebar
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
+      </div>
+
       <main className={cn(
-        "flex-1 transition-all duration-300 min-h-screen flex flex-col",
-        isSidebarCollapsed ? "ml-20" : "ml-64"
+        "flex-1 transition-all duration-300 min-h-screen flex flex-col pb-20 md:pb-0",
+        "md:ml-64",
+        isSidebarCollapsed && "md:ml-20"
       )}>
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4">
+        {/* Desktop Header */}
+        <header className="hidden md:block sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4">
           <div className="flex items-center justify-between max-w-[1600px] mx-auto">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-black tracking-tight uppercase text-slate-900">
@@ -218,14 +245,11 @@ export default function App() {
                 </button>
               )}
             </div>
-
-            <div className="flex items-center gap-2">
-            </div>
           </div>
         </header>
 
         {/* Content Area */}
-        <div className="flex-1 max-w-[1600px] mx-auto w-full">
+        <div className="flex-1 max-w-[1600px] mx-auto w-full px-4 md:px-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
@@ -245,13 +269,17 @@ export default function App() {
                   <div className="flex flex-col h-full">
                     <PipelineFilter 
                       leads={leads} 
-                      onFilterChange={setFilteredLeads} 
+                      onFilterChange={setFilteredLeads}
+                      activeStage={activeMobileStage as any}
+                      onStageChange={setActiveMobileStage}
                     />
                     <div className="flex-1 overflow-hidden">
                       <KanbanBoard
                         leads={filteredLeads}
                         onUpdateLead={handleUpdateLead}
                         onSelectLead={(lead) => setSelectedLeadId(lead.id)}
+                        activeMobileStage={activeMobileStage}
+                        onMobileStageChange={setActiveMobileStage}
                       />
                     </div>
                   </div>
@@ -271,6 +299,15 @@ export default function App() {
           )}
         </div>
       </main>
+
+      <BottomNavigation
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        mainNavItems={mainNavItems}
+        secondaryNavItems={secondaryNavItems}
+        isMoreMenuOpen={isMoreMenuOpen}
+        setIsMoreMenuOpen={setIsMoreMenuOpen}
+      />
 
       {/* Modals */}
       <AnimatePresence>

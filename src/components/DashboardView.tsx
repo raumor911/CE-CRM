@@ -105,7 +105,7 @@ const PeriodValueInput = ({
   color: 'indigo' | 'emerald' 
 }) => {
   const baseClasses = cn(
-    "h-6 px-2 text-[10px] font-bold rounded-lg border bg-white shadow-sm focus:outline-none transition-colors",
+    "h-11 md:h-8 px-3 md:px-2 text-base md:text-[10px] font-bold rounded-xl md:rounded-lg border bg-white shadow-sm focus:outline-none transition-colors w-full",
     color === 'indigo' 
       ? "border-indigo-100 text-indigo-700 focus:border-indigo-300 focus:ring-1 focus:ring-indigo-300" 
       : "border-emerald-100 text-emerald-700 focus:border-emerald-300 focus:ring-1 focus:ring-emerald-300"
@@ -118,7 +118,7 @@ const PeriodValueInput = ({
         min="2000" max="2100" 
         value={value} 
         onChange={e => onChange(e.target.value)} 
-        className={cn(baseClasses, "w-16 text-center")} 
+        className={cn(baseClasses, "text-center")} 
       />
     );
   }
@@ -129,7 +129,7 @@ const PeriodValueInput = ({
         type="month" 
         value={value} 
         onChange={e => onChange(e.target.value)} 
-        className={cn(baseClasses, "w-[110px]")} 
+        className={cn(baseClasses)} 
       />
     );
   }
@@ -140,7 +140,7 @@ const PeriodValueInput = ({
         type="week" 
         value={value} 
         onChange={e => onChange(e.target.value)} 
-        className={cn(baseClasses, "w-[130px]")} 
+        className={cn(baseClasses)} 
       />
     );
   }
@@ -151,7 +151,7 @@ const PeriodValueInput = ({
     const qVal = q || 'Q1';
     
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5 w-full">
         <input 
           type="month" 
           value={monthVal} 
@@ -159,12 +159,12 @@ const PeriodValueInput = ({
             const newVal = e.target.value;
             if (newVal) onChange(`${newVal}-${qVal}`);
           }} 
-          className={cn(baseClasses, "w-[110px]")} 
+          className={cn(baseClasses, "flex-1")} 
         />
         <select 
           value={qVal}
           onChange={e => onChange(`${monthVal}-${e.target.value}`)}
-          className={cn(baseClasses, "w-12 px-1 text-center cursor-pointer")}
+          className={cn(baseClasses, "w-16 px-1 text-center cursor-pointer shrink-0")}
         >
           <option value="Q1">Q1</option>
           <option value="Q2">Q2</option>
@@ -500,135 +500,112 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
   ];
 
   return (
-    <div className="space-y-8 p-6 bg-bg-main min-h-full">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 md:space-y-8 p-4 md:p-6 lg:p-8 bg-zinc-50 min-h-full pb-32 md:pb-8">
+      <div className="flex items-center justify-between safe-top">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Dashboard Operativo</h1>
-          <p className="text-slate-500 text-sm font-medium">Resumen de métricas y rendimiento del pipeline.</p>
+          <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 uppercase tracking-tight">Dashboard Operativo</h1>
+          <p className="text-slate-500 text-xs md:text-sm font-medium">Resumen de métricas y rendimiento del pipeline.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
         {stats.map((stat, idx) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow relative"
+            className="bg-white border border-slate-200 p-5 rounded-3xl flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden active:scale-[0.98]"
           >
             <div className="flex items-start justify-between">
-              <div className={`${stat.bg} ${stat.color} p-2.5 rounded-xl`}>
-                <stat.icon size={20} />
+              <div className={cn(stat.bg, stat.color, "p-2.5 rounded-2xl shrink-0 shadow-sm")}>
+                <stat.icon size={20} className="md:w-5 md:h-5" />
               </div>
-              <div className="flex flex-col items-end gap-1.5 min-w-0">
-                {stat.periodKey && (
-                  <div className="flex flex-wrap items-center justify-end gap-1.5 relative z-20">
-                    <PeriodValueInput
-                      type={stat.periodType}
-                      value={stat.periodValue}
-                      onChange={stat.setPeriodValue}
-                      color={stat.periodKey === 'sales' ? 'indigo' : 'emerald'}
-                    />
-                    <div ref={stat.periodKey === 'pipeline' ? pipelineRef : salesRef} className="relative">
-                      <button
-                        onClick={() => setOpenDropdown(openDropdown === stat.periodKey ? null : stat.periodKey)}
-                        className={cn(
-                          "flex items-center gap-1.5 px-2.5 h-6 rounded-lg border text-[10px] font-black uppercase tracking-wider transition-all duration-200",
-                          stat.periodKey === 'pipeline' 
-                            ? "bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 shadow-sm"
-                            : "bg-indigo-50 border-indigo-100 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-200 shadow-sm"
-                        )}
-                      >
-                        <CalendarDays size={11} />
-                        <span>{PERIOD_LABELS[stat.periodType]}</span>
-                        <motion.div
-                          animate={{ rotate: openDropdown === stat.periodKey ? 180 : 0 }}
-                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        >
-                          <ChevronDown size={11} className="shrink-0" />
-                        </motion.div>
-                      </button>
+              
+              {stat.periodKey && (
+                <div className="flex flex-col items-end gap-1.5 min-w-0">
+                  <div ref={stat.periodKey === 'pipeline' ? pipelineRef : salesRef} className="relative z-20">
+                    <button
+                      onClick={() => setOpenDropdown(openDropdown === stat.periodKey ? null : stat.periodKey)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all duration-200 shadow-sm",
+                        stat.periodKey === 'pipeline' 
+                          ? "bg-emerald-50 border-emerald-100 text-emerald-700"
+                          : "bg-indigo-50 border-indigo-100 text-indigo-700"
+                      )}
+                    >
+                      <span>{PERIOD_LABELS[stat.periodType]}</span>
+                      <ChevronDown size={12} className={cn("transition-transform", openDropdown === stat.periodKey ? "rotate-180" : "")} />
+                    </button>
 
-                      <AnimatePresence>
-                        {openDropdown === stat.periodKey && (
-                          <>
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              className="fixed inset-0 z-40 -mx-5 -my-5" 
-                              onClick={() => setOpenDropdown(null)}
-                            />
-                            <motion.div
-                              initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                              transition={{ type: "spring", stiffness: 400, damping: 35 }}
-                              className={cn(
-                                "absolute right-0 z-50 mt-2 w-44 bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200 overflow-hidden p-1"
-                              )}
-                            >
-                              {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((key, i) => {
-                                const isSelected = stat.periodType === key;
-                                
-                                return (
-                                  <motion.button
-                                    key={key}
-                                    initial={{ opacity: 0, x: -5 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: i * 0.03 }}
-                                    onClick={() => {
-                                      stat.setPeriodType(key);
-                                      stat.setPeriodValue(getDefaultPeriodValue(key));
-                                      setOpenDropdown(null);
-                                    }}
-                                    className={cn(
-                                      "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-left text-xs font-bold transition-all duration-150 group my-0.5",
-                                      isSelected 
-                                        ? stat.periodKey === 'pipeline'
-                                          ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100"
-                                          : "bg-indigo-50 text-indigo-800 ring-1 ring-indigo-100"
-                                        : "text-slate-600 hover:bg-slate-50"
-                                    )}
-                                  >
-                                    <span className="flex flex-col items-start">
-                                      <span>{PERIOD_LABELS[key]}</span>
-                                      <span className="text-[9px] font-medium opacity-60 uppercase tracking-tight">
-                                        {PERIOD_DESC[key]}
-                                      </span>
-                                    </span>
-                                    {isSelected && (
-                                      <motion.div
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ type: "spring", stiffness: 500 }}
-                                        className={cn(
-                                          "w-5 h-5 rounded-lg flex items-center justify-center",
-                                          stat.periodKey === 'pipeline' ? "bg-emerald-500 text-white" : "bg-indigo-500 text-white"
-                                        )}
-                                      >
-                                        <Check size={12} />
-                                      </motion.div>
-                                    )}
-                                  </motion.button>
-                                );
-                              })}
-                            </motion.div>
-                          </>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                    <AnimatePresence>
+                      {openDropdown === stat.periodKey && (
+                        <>
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-40" 
+                            onClick={() => setOpenDropdown(null)}
+                          />
+                          <motion.div
+                            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                            className="absolute right-0 z-50 mt-2 w-40 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden p-1"
+                          >
+                            {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((key) => (
+                              <button
+                                key={key}
+                                onClick={() => {
+                                  stat.setPeriodType(key);
+                                  stat.setPeriodValue(getDefaultPeriodValue(key));
+                                  setOpenDropdown(null);
+                                }}
+                                className={cn(
+                                  "w-full flex flex-col items-start px-3 py-2 rounded-xl text-left text-[10px] font-bold transition-all my-0.5",
+                                  stat.periodType === key 
+                                    ? stat.periodKey === 'pipeline' ? "bg-emerald-50 text-emerald-800" : "bg-indigo-50 text-indigo-800"
+                                    : "text-slate-600 hover:bg-slate-50"
+                                )}
+                              >
+                                <span>{PERIOD_LABELS[key]}</span>
+                                <span className="text-[8px] opacity-60 font-medium">{PERIOD_DESC[key]}</span>
+                              </button>
+                            ))}
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
                   </div>
-                )}
-                <span className="text-[9px] font-bold text-slate-400 uppercase text-right max-w-[180px] leading-tight">
-                  {stat.sub}
-                </span>
-              </div>
+                </div>
+              )}
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">{stat.label}</p>
-              <p className="text-2xl font-black text-slate-900 tracking-tight">{stat.value}</p>
+
+            <div className="mt-1">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 truncate">{stat.label}</p>
+              <p className="text-lg md:text-2xl font-black text-slate-900 tracking-tight truncate">{stat.value}</p>
+              
+              <div className="mt-2 pt-2 border-t border-slate-50 min-h-[24px]">
+                {stat.periodKey ? (
+                  <PeriodValueInput
+                    type={stat.periodType}
+                    value={stat.periodValue}
+                    onChange={stat.setPeriodValue}
+                    color={stat.periodKey === 'sales' ? 'indigo' : 'emerald'}
+                  />
+                ) : (
+                  <span className="text-[9px] font-bold text-slate-400 uppercase leading-tight line-clamp-2">
+                    {stat.sub}
+                  </span>
+                )}
+              </div>
+              
+              {stat.periodKey && (
+                <p className="text-[8px] font-bold text-slate-400 uppercase mt-1.5 truncate">
+                  {stat.sub.split('•')[0]}
+                </p>
+              )}
             </div>
           </motion.div>
         ))}
@@ -974,7 +951,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ leads }) => {
           </div>
 
           {activeLeads.filter(l => l.stage !== 'Ingreso').length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {activeLeads
                 .filter(l => l.stage !== 'Ingreso')
                 .sort((a, b) => getDaysAgo(b.last_activity) - getDaysAgo(a.last_activity))

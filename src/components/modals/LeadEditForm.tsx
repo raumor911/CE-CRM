@@ -77,7 +77,7 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
                 <h2 className="text-xl font-bold text-zinc-900">Editar Información del Cliente</h2>
                 <p className="text-xs text-zinc-500 font-medium">{formData.project_name}</p>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
+              <button onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
                 <X size={20} />
               </button>
             </div>
@@ -97,56 +97,56 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
                   Nombre del Proyecto
                 </label>
                 <input
                   type="text"
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  className="w-full px-4 py-3 md:py-3.5 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                   value={formData.project_name}
                   onChange={e => setFormData({ ...formData, project_name: e.target.value })}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
                     Nombre del Lead
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-3 md:py-3.5 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.lead_name}
                     onChange={e => setFormData({ ...formData, lead_name: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
                     Email
                   </label>
                   <input
                     type="email"
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-3 md:py-3.5 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.email}
                     onChange={e => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
                     Teléfono
                   </label>
                   <input
                     type="tel"
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-3 md:py-3.5 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.phone}
                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
                     Presupuesto (MXN)
                   </label>
                   <div className="relative">
@@ -155,7 +155,7 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
                       type="number"
                       min="0"
                       step="0.01"
-                      className="w-full pl-8 pr-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full pl-8 pr-4 py-3 md:py-3.5 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.budget}
                       onChange={e => setFormData({ ...formData, budget: e.target.value })}
                     />
@@ -164,9 +164,9 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Categoría</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">Categoría</label>
                 <select
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  className="w-full px-4 py-3 md:py-3.5 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
                   value={formData.category}
                   onChange={e => setFormData({ ...formData, category: e.target.value as any })}
                 >

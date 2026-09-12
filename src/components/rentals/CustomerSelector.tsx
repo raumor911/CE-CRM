@@ -122,7 +122,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
           aria-controls="rental-customer-options"
           aria-autocomplete="list"
           placeholder="Escribe el nombre del cliente..."
-          className={`w-full px-4 py-3 rounded-xl border bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
+          className={`w-full px-4 py-3 text-base md:text-sm rounded-xl border bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
             error ? 'border-rose-500' : 'border-zinc-200'
           }`}
           value={value}

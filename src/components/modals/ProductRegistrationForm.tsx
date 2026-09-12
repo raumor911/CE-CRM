@@ -91,10 +91,15 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
   // Reset form when product type changes to ensure valid options
   useEffect(() => {
     if (formData.product_type === 'Oficina') {
-      if (formData.location === 'Taller' || formData.location === 'Otra ubicación') {
+      if (
+        formData.location === 'Taller' ||
+        formData.location === 'En traslado' ||
+        formData.location === 'Proveedor' ||
+        formData.location === 'Otra ubicación'
+      ) {
         setFormData(prev => ({ ...prev, location: '' }));
       }
-      if (formData.operational_status === 'En modificación') {
+      if (['Vendido', 'Mantenimiento', 'Fuera de servicio', 'En retorno', 'Inspección'].includes(formData.operational_status)) {
         setFormData(prev => ({ ...prev, operational_status: 'Disponible' }));
       }
     }
@@ -157,20 +162,20 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
   };
 
   const productTypes: ProductType[] = ['Oficina', '20 DC', '40 DC', '40 HC'];
-  const conditions: ProductCondition[] = ['Nuevo', 'Usado'];
+  const conditions: ProductCondition[] = ['Nuevo', 'Excelente', 'Bueno', 'Regular', 'Requiere reparación'];
   
   const getLocations = (): ProductLocation[] => {
     if (formData.product_type === 'Oficina') {
-      return ['Patio principal', 'Instalaciones del cliente'];
+      return ['Patio principal', 'Cliente'];
     }
-    return ['Patio principal', 'Taller', 'Instalaciones del cliente', 'Otra ubicación'];
+    return ['Patio principal', 'Taller', 'Cliente', 'En traslado', 'Proveedor', 'Otra ubicación'];
   };
 
   const getStatuses = (): ProductOperationalStatus[] => {
     if (formData.product_type === 'Oficina') {
       return ['Disponible', 'Reservada', 'Rentada'];
     }
-    return ['Disponible', 'Reservada', 'Rentada', 'En modificación'];
+    return ['Disponible', 'Reservada', 'Rentada', 'Vendido', 'Mantenimiento', 'Fuera de servicio', 'En retorno', 'Inspección'];
   };
 
   if (!isOpen) return null;
@@ -229,7 +234,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
                 required
                 value={formData.product_type}
                 onChange={(e) => setFormData({ ...formData, product_type: e.target.value as ProductType })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                className="w-full px-4 py-3 min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
               >
                 <option value="" disabled>Seleccionar tipo...</option>
                 {productTypes.map(type => (
@@ -246,7 +251,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
                   type="text"
                   readOnly
                   value="Se generará al registrar"
-                  className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-400 font-medium cursor-not-allowed italic"
+                  className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-base text-slate-400 font-medium cursor-not-allowed italic"
                 />
                 <Info size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300" />
               </div>
@@ -260,7 +265,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
                 value={formData.physical_number}
                 onChange={(e) => setFormData({ ...formData, physical_number: e.target.value })}
                 placeholder="Número marítimo o placa..."
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
               />
             </div>
 
@@ -293,7 +298,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
                 required
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value as ProductLocation })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                className="w-full px-4 py-3 min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
               >
                 <option value="" disabled>Seleccionar ubicación...</option>
                 {getLocations().map(loc => (
@@ -309,7 +314,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
                 required
                 value={formData.operational_status}
                 onChange={(e) => setFormData({ ...formData, operational_status: e.target.value as ProductOperationalStatus })}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                className="w-full px-4 py-3 min-h-[44px] bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
               >
                 {getStatuses().map(status => (
                   <option key={status} value={status}>{status}</option>
@@ -436,7 +441,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
 
           {/* Detalle de Ubicación (Condicional) */}
           <AnimatePresence>
-            {(formData.location === 'Otra ubicación' || formData.location === 'Instalaciones del cliente') && (
+            {(formData.location === 'Otra ubicación' || formData.location === 'Cliente') && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -452,7 +457,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
                   value={formData.location_detail}
                   onChange={(e) => setFormData({ ...formData, location_detail: e.target.value })}
                   placeholder={formData.location === 'Otra ubicación' ? "Especificar ubicación exacta..." : "Ej. Obra León, Guanajuato..."}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
                 />
               </motion.div>
             )}

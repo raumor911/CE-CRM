@@ -21,12 +21,19 @@ export interface FilterState {
 interface PipelineFilterProps {
   leads: Lead[];
   onFilterChange: (filteredLeads: Lead[]) => void;
+  activeStage?: PipelineStageFilter;
+  onStageChange?: (stage: PipelineStageFilter) => void;
 }
 
-export const PipelineFilter: React.FC<PipelineFilterProps> = ({ leads, onFilterChange }) => {
+export const PipelineFilter: React.FC<PipelineFilterProps> = ({ 
+  leads, 
+  onFilterChange,
+  activeStage,
+  onStageChange
+}) => {
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
-    stage: 'all',
+    stage: activeStage || 'all',
     quickFilter: null,
     responsible: null,
     product: null,
@@ -35,6 +42,12 @@ export const PipelineFilter: React.FC<PipelineFilterProps> = ({ leads, onFilterC
     budgetRange: null,
     daysWithoutActivity: null,
   });
+
+  useEffect(() => {
+    if (activeStage && activeStage !== filters.stage) {
+      setFilters(prev => ({ ...prev, stage: activeStage }));
+    }
+  }, [activeStage]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isStageDropdownOpen, setIsStageDropdownOpen] = useState(false);
@@ -208,6 +221,9 @@ export const PipelineFilter: React.FC<PipelineFilterProps> = ({ leads, onFilterC
 
   const updateFilter = (key: keyof FilterState, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    if (key === 'stage' && onStageChange) {
+      onStageChange(value);
+    }
   };
 
   const clearFilters = () => {
@@ -232,9 +248,111 @@ export const PipelineFilter: React.FC<PipelineFilterProps> = ({ leads, onFilterC
   }).length;
 
   return (
-    <div className="bg-white border-b border-slate-200 px-6 py-4 space-y-4">
-      {/* Capa 1 y 2: Jerarquía de búsqueda */}
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between max-w-[1600px] mx-auto">
+    <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-4 space-y-4">
+      {/* Mobile View Header */}
+      <div className="md:hidden space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Pipeline</h2>
+          <div className="relative">
+            <button
+              onClick={() => setIsStageDropdownOpen(!isStageDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-zinc-50 border border-zinc-100 rounded-xl text-xs font-black text-zinc-900 uppercase tracking-tight active:scale-95 transition-all"
+            >
+              <span>{stageOptions.find(s => s.id === filters.stage)?.label}</span>
+              <ChevronDown size={14} className={cn("text-zinc-400 transition-transform", isStageDropdownOpen && "rotate-180")} />
+            </button>
+
+            <AnimatePresence>
+              {isStageDropdownOpen && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setIsStageDropdownOpen(false)}
+                    className="fixed inset-0 z-40 bg-zinc-950/20 backdrop-blur-sm"
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute top-full right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden"
+                  >
+                    <div className="p-3 bg-slate-50 border-b border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Seleccionar Etapa</p>
+                    </div>
+                    <div className="p-2">
+                      {stageOptions.map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => {
+                            updateFilter('stage', opt.id);
+                            updateFilter('quickFilter', 'all');
+                            setIsStageDropdownOpen(false);
+                          }}
+                          className={cn(
+                            "w-full text-left p-3 rounded-xl transition-all group",
+                            filters.stage === opt.id ? "bg-indigo-50" : "hover:bg-slate-50"
+                          )}
+                        >
+                          <div className="flex flex-col">
+                            <span className={cn("text-xs font-bold uppercase tracking-tight", filters.stage === opt.id ? "text-indigo-600" : "text-slate-700")}>{opt.label}</span>
+                            <span className="text-[9px] text-slate-400 group-hover:text-slate-500 uppercase tracking-tighter">{opt.description}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar lead, empresa..."
+              value={filters.searchQuery}
+              onChange={(e) => updateFilter('searchQuery', e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+            />
+          </div>
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm",
+              activeFiltersCount > 0 ? "bg-indigo-50 border-indigo-200 text-indigo-600" : "bg-white border-slate-200 text-slate-600"
+            )}
+          >
+            <Filter size={18} />
+            {activeFiltersCount > 0 && (
+              <span className="bg-indigo-600 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">
+            {filteredLeads.length} Oportunidades
+          </span>
+          {activeFiltersCount > 0 && (
+            <button
+              onClick={clearFilters}
+              className="text-[10px] font-bold text-rose-500 uppercase tracking-widest"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop View Header */}
+      <div className="hidden md:flex flex-col md:flex-row gap-4 items-start md:items-center justify-between max-w-[1600px] mx-auto">
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative">
             <button
@@ -478,7 +596,7 @@ export const PipelineFilter: React.FC<PipelineFilterProps> = ({ leads, onFilterC
                       <input
                         type="number"
                         placeholder="0"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-base md:text-sm"
                         onChange={(e) => updateFilter('budgetRange', { ...filters.budgetRange, min: Number(e.target.value) })}
                       />
                     </div>
@@ -487,7 +605,7 @@ export const PipelineFilter: React.FC<PipelineFilterProps> = ({ leads, onFilterC
                       <input
                         type="number"
                         placeholder="∞"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-base md:text-sm"
                         onChange={(e) => updateFilter('budgetRange', { ...filters.budgetRange, max: Number(e.target.value) || 9999999 })}
                       />
                     </div>

@@ -7,7 +7,6 @@ import {
   useSensor, 
   useSensors, 
   closestCorners,
-  closestCenter,
   DragOverlay,
   TouchSensor,
   KeyboardSensor
@@ -23,11 +22,15 @@ import { LeadCard } from './LeadCard';
 import { STAGES } from '../constants';
 import { validateLeadClosure } from '../lib/leadClosure';
 import { cn } from '../lib/utils';
+import { ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface KanbanBoardProps {
   leads: Lead[];
   onUpdateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null> | void;
   onSelectLead: (lead: Lead) => void;
+  activeMobileStage: string;
+  onMobileStageChange: (stage: string) => void;
 }
 
 const VALID_STAGES = ['Ingreso', 'Briefing', 'Propuesta', 'Cierre'];
@@ -58,7 +61,7 @@ const KanbanColumn: React.FC<{
   };
 
   return (
-    <div ref={setNodeRef} className="flex-shrink-0 w-80 flex flex-col min-h-[500px]">
+    <div ref={setNodeRef} className="flex-shrink-0 w-full md:w-80 flex flex-col min-h-[500px]">
       <div className="flex items-center justify-between mb-4 px-2">
         <h3 className="font-black uppercase text-xs text-zinc-400 flex items-center gap-2">
           <span className={cn("w-2 h-2 rounded-full", getStageColor(title))}></span>
@@ -102,7 +105,13 @@ const KanbanColumn: React.FC<{
   );
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, onSelectLead }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
+  leads, 
+  onUpdateLead, 
+  onSelectLead,
+  activeMobileStage,
+  onMobileStageChange
+}) => {
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
 
   const sensors = useSensors(
@@ -169,6 +178,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
     }
   };
 
+  const currentStageIndex = STAGES.indexOf(activeMobileStage as any);
+
   return (
     <DndContext 
       sensors={sensors} 
@@ -176,17 +187,42 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ leads, onUpdateLead, o
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide px-6 py-4">
-        {STAGES.map((stage) => (
-          <KanbanColumn 
-            key={stage}
-            id={stage}
-            title={stage}
-            leads={leads.filter(l => l.stage === stage)}
-            onUpdateLead={onUpdateLead}
-            onSelectLead={onSelectLead}
-          />
-        ))}
+      {/* Kanban Desktop / List Mobile */}
+      <div className="flex md:gap-6 overflow-x-hidden md:overflow-x-auto pb-6 scrollbar-hide px-4 md:px-6 py-4 h-full">
+        {/* En desktop mostramos todas */}
+        <div className="hidden md:flex gap-6 w-full">
+          {STAGES.map((stage) => (
+            <KanbanColumn 
+              key={stage}
+              id={stage}
+              title={stage}
+              leads={leads.filter(l => l.stage === stage)}
+              onUpdateLead={onUpdateLead}
+              onSelectLead={onSelectLead}
+            />
+          ))}
+        </div>
+
+        {/* En mobile mostramos una lista plana según la etapa seleccionada */}
+        <div className="md:hidden w-full pb-20">
+          <div className="flex flex-col gap-4 w-full">
+            {leads.length === 0 ? (
+              <div className="py-12 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 text-xs text-center px-4 gap-2">
+                <p>No hay oportunidades en esta vista.</p>
+                <p className="text-[10px] opacity-70 italic">Modifica los filtros o selecciona otra etapa.</p>
+              </div>
+            ) : (
+              leads.map(lead => (
+                <LeadCard 
+                  key={lead.id} 
+                  lead={lead} 
+                  onUpdateLead={onUpdateLead} 
+                  onSelectLead={onSelectLead}
+                />
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       <DragOverlay dropAnimation={null}>

@@ -30,6 +30,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEffect } from 'react';
 import { ActivityModal } from './modals/ActivityModal';
 import { CatalystMediaViewer } from './CatalystMediaViewer';
+import { InventoryCompatibility } from './InventoryCompatibility';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -386,7 +387,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   }; 
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-8">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -399,80 +400,66 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-5xl h-full max-h-[850px] bg-white border border-zinc-200 rounded-3xl overflow-hidden flex flex-col shadow-2xl"
+        className="relative w-full max-w-5xl h-full md:max-h-[850px] bg-white border border-zinc-200 md:rounded-3xl overflow-hidden flex flex-col shadow-2xl"
       >
         {/* Header */}
-        <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center text-white font-black text-xl">
+        <div className="p-4 md:p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50 sticky top-0 z-20 safe-top shrink-0">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-11 h-11 md:w-12 md:h-12 bg-zinc-900 rounded-xl md:rounded-2xl flex items-center justify-center text-white font-black text-lg md:text-xl shrink-0">
               {lead.lead_name[0]}
             </div>
-            <div>
-              <h2 className="text-xl font-black text-zinc-900 tracking-tight">{lead.lead_name}</h2>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">{lead.project_name}</span>
-                <span className="w-1 h-1 bg-zinc-300 rounded-full" />
+            <div className="min-w-0">
+              <h2 className="text-base md:text-xl font-black text-zinc-900 tracking-tight truncate max-w-[150px] md:max-w-none">{lead.lead_name}</h2>
+              <div className="flex items-center gap-2 md:gap-3 mt-0.5 md:mt-1">
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider truncate max-w-[80px] md:max-w-none">{lead.project_name}</span>
+                <span className="w-1 h-1 bg-zinc-300 rounded-full shrink-0" />
                 <span className={cn(
-                  "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg",
-                  lead.is_archived ? "bg-rose-500/10 text-rose-500" :
-                  lead.stage === 'Ingreso' ? "bg-blue-500/10 text-blue-500" :
-                  lead.stage === 'Briefing' ? "bg-amber-500/10 text-amber-500" :
-                  lead.stage === 'Propuesta' ? "bg-indigo-500/10 text-indigo-500" :
-                  "bg-emerald-500/10 text-emerald-500"
+                  "text-[8px] md:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg whitespace-nowrap border",
+                  lead.is_archived ? "bg-rose-50 text-rose-500 border-rose-100" :
+                  lead.stage === 'Ingreso' ? "bg-blue-50 text-blue-500 border-blue-100" :
+                  lead.stage === 'Briefing' ? "bg-amber-50 text-amber-500 border-amber-100" :
+                  lead.stage === 'Propuesta' ? "bg-indigo-50 text-indigo-500 border-indigo-100" :
+                  "bg-emerald-50 text-emerald-500 border-emerald-100"
                 )}>
-                  {lead.is_archived ? `Archivado: ${lead.archive_reason}` : lead.stage}
+                  {lead.is_archived ? `Archivado` : lead.stage}
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {lead.is_archived && (
-              <button
-                onClick={() => {
-                  onUpdate(lead.id, { is_archived: false });
-                  onClose();
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-500/20"
-              >
-                <CheckCircle2 size={16} />
-                Recuperar Lead
-              </button>
-            )}
+          <div className="flex items-center gap-1 md:gap-3">
             <button
               onClick={() => onUpdate(lead.id, { is_priority: !lead.is_priority })}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm border",
+                "flex items-center justify-center w-11 h-11 md:w-auto md:px-4 md:py-2 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95",
                 lead.is_priority 
-                  ? "bg-rose-500 text-white border-rose-600 shadow-rose-500/30" 
-                  : "bg-white text-zinc-500 border-zinc-200 hover:border-rose-200 hover:text-rose-500"
+                  ? "bg-rose-500 text-white border-rose-600 shadow-rose-500/20" 
+                  : "bg-white text-zinc-400 border-zinc-200 hover:border-rose-200 hover:text-rose-500"
               )}
-              title={lead.is_priority ? "Quitar Alta Prioridad" : "Marcar como Alta Prioridad"}
             >
-              <AlertCircle size={16} />
-              <span className="hidden sm:inline">{lead.is_priority ? "Alta Prioridad" : "Prioridad"}</span>
+              <AlertCircle size={20} className="md:w-[18px]" />
+              <span className="hidden md:inline ml-2">{lead.is_priority ? "Prioridad Alta" : "Prioridad"}</span>
             </button>
             <button
               onClick={() => setIsEditModalOpen(true)}
-              className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-500 hover:text-zinc-900 transition-all"
-              title="Editar Lead"
+              className="w-11 h-11 flex items-center justify-center hover:bg-zinc-100 rounded-xl text-zinc-400 hover:text-zinc-900 transition-all active:scale-95"
             >
               <Edit2 size={20} />
             </button>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-500 hover:text-zinc-900 transition-all"
+              className="w-11 h-11 flex items-center justify-center hover:bg-zinc-100 rounded-xl text-zinc-400 hover:text-zinc-900 transition-all active:scale-95"
             >
               <X size={24} />
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+        <div className="flex-1 overflow-y-auto md:overflow-hidden flex flex-col md:flex-row pb-32 md:pb-0">
           {/* Left Panel: Info & Stats */}
-          <div className="w-full md:w-80 border-r border-zinc-100 p-6 space-y-8 overflow-y-auto bg-zinc-50/50 scrollbar-hide">
+          <div className="w-full md:w-80 md:border-r border-zinc-100 p-4 md:p-6 space-y-6 md:space-y-8 md:overflow-y-auto bg-zinc-50/50">
             
             {/* SECCIÓN GESTIÓN FINANCIERA */} 
-            <div className="space-y-4 pt-4 border-t border-zinc-100"> 
+            <div className="space-y-4 pt-2 md:pt-4 border-t md:border-t-0 border-zinc-100"> 
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Control de Venta</h3> 
               
               <div className="grid grid-cols-1 gap-3"> 
@@ -563,6 +550,14 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </div>
             </div>
 
+            {/* RELACIÓN CON INVENTARIO COMPATIBLE */}
+            <div className="pt-4 border-t border-zinc-100">
+              <InventoryCompatibility 
+                productType={lead.category} 
+                requiredQuantity={2} // Mock: En el futuro esto vendrá de lead.quantity
+              />
+            </div>
+
             {/* 2. ESTADO Y SENTIMIENTO (Botones Blindados) */}
             <div className="space-y-4">
               <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Sentimiento</h3>
@@ -576,7 +571,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                       onUpdate(lead.id, { sentiment_label: s });
                     }}
                     className={cn( 
-                      "w-full px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-between group", 
+                      "w-full px-4 py-3 min-h-[44px] rounded-xl text-xs font-bold transition-all border flex items-center justify-between group", 
                       lead.sentiment_label === s 
                         ? s === 'Entusiasta' ? "bg-emerald-50 border-emerald-200 text-emerald-700" : 
                           s === 'Dudoso' ? "bg-amber-50 border-amber-200 text-amber-700" : 
@@ -613,7 +608,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 }
               });
             }}
-            className="w-full flex items-center justify-between group py-1.5 disabled:opacity-50"
+            className="w-full flex items-center justify-between group py-3 min-h-[44px] disabled:opacity-50"
           >
             <span className={cn(
               "text-xs font-medium transition-colors",
@@ -699,7 +694,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
             </div>
 
             {/* 5. ACCIONES FINALES (Botones Blindados) */}
-            <div className="pt-4 border-t border-zinc-100 space-y-3">
+            <div className="hidden md:block pt-4 border-t border-zinc-100 space-y-3">
               <button 
                 type="button"
                 onClick={(e) => {
@@ -727,26 +722,26 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
           </div>
 
           {/* Right Panel: Tabs & Content */}
-          <div className="flex-1 flex flex-col overflow-hidden bg-white">
-            <div className="flex items-center gap-8 px-8 border-b border-zinc-100">
+          <div className="flex-1 flex flex-col md:overflow-hidden bg-white">
+            <div className="flex items-center gap-6 md:gap-8 px-4 md:px-8 border-b border-zinc-100 sticky top-[73px] md:top-0 z-10 bg-white">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center gap-2 py-4 text-sm font-bold transition-all border-b-2",
+                    "flex items-center gap-2 py-3 md:py-4 min-h-[44px] text-xs md:text-sm font-bold transition-all border-b-2",
                     activeTab === tab.id 
                       ? "text-zinc-900 border-zinc-900" 
                       : "text-zinc-400 border-transparent hover:text-zinc-600"
                   )}
                 >
-                  <tab.icon size={18} />
+                  <tab.icon size={16} className="md:w-[18px] md:h-[18px]" />
                   {tab.label}
                 </button>
               ))}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex-1 md:overflow-y-auto p-4 md:p-8">
               <AnimatePresence mode="wait">
                 {activeTab === 'timeline' && (
                   <motion.div
@@ -754,16 +749,16 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="space-y-8"
+                    className="space-y-6 md:space-y-8"
                   >
                     <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Historial de Actividad</h4>
+                      <h4 className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest">Historial de Actividad</h4>
                       <button 
                         onClick={() => setIsActivityModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-zinc-900/10"
+                        className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-[10px] md:text-xs font-bold rounded-lg md:rounded-xl transition-all shadow-lg shadow-zinc-900/10"
                       >
-                        <Plus size={14} />
-                        <span>Nueva Actividad</span>
+                        <Plus size={12} className="md:w-[14px] md:h-[14px]" />
+                        <span>Nueva</span>
                       </button>
                     </div>
 
@@ -830,7 +825,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
                         placeholder="Escribe un comentario o actualización importante..."
-                        className="w-full bg-white border border-zinc-200 rounded-2xl p-4 pr-12 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all min-h-[120px] resize-none shadow-sm"
+                        className="w-full bg-white border border-zinc-200 rounded-2xl p-4 pr-12 text-base md:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all min-h-[120px] resize-none shadow-sm"
                       />
                       <button 
                         onClick={handleAddNote}
@@ -939,6 +934,32 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
               </AnimatePresence>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Sticky Actions */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-lg border-t border-zinc-100 flex gap-3 z-30 safe-bottom">
+          <button 
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsActivityModalOpen(true);
+            }}
+            className="flex-1 bg-zinc-900 text-white font-bold py-4 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-[0.98]"
+          >
+            <Plus size={20} />
+            <span className="text-sm">Actividad</span>
+          </button>
+          
+          <button 
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsArchiveModalOpen(true);
+            }}
+            className="p-4 bg-white border border-zinc-200 text-zinc-500 rounded-2xl transition-all flex items-center justify-center active:bg-rose-50 active:text-rose-600 active:border-rose-200"
+          >
+            <Archive size={20} />
+          </button>
         </div>
       </motion.div>
 

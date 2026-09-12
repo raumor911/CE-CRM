@@ -46,25 +46,26 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ leads: initialLead
   );
 
   return (
-    <div className="p-6 space-y-6 bg-bg-main min-h-full">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-4 md:p-6 space-y-6 bg-zinc-50 min-h-full pb-32 md:pb-8">
+      <div className="flex flex-col gap-6 safe-top">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">
+          <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 uppercase">
             {showArchived ? 'Archivo Estratégico' : 'Directorio de Leads'}
           </h1>
-          <p className="text-slate-500 text-sm font-medium">
+          <p className="text-slate-500 text-xs md:text-sm font-medium">
             {showArchived 
-              ? 'Consulta leads en hibernación para futuras campañas de re-engagement.' 
-              : 'Gestión masiva y búsqueda detallada de prospectos activos.'}
+              ? 'Consulta leads en hibernación para futuras campañas.' 
+              : 'Gestión masiva y búsqueda de prospectos activos.'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex bg-white border border-slate-200 rounded-2xl p-1 shadow-sm shrink-0">
             <button
               onClick={() => setShowArchived(false)}
               className={cn(
-                "px-4 py-1.5 text-xs font-bold rounded-md transition-all",
-                !showArchived ? "bg-zinc-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
+                "flex-1 md:flex-none px-6 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
+                !showArchived ? "bg-zinc-900 text-white shadow-lg" : "text-slate-400 hover:text-slate-900"
               )}
             >
               Activos
@@ -72,32 +73,118 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ leads: initialLead
             <button
               onClick={() => setShowArchived(true)}
               className={cn(
-                "px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2",
-                showArchived ? "bg-rose-600 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
+                "flex-1 md:flex-none px-6 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2",
+                showArchived ? "bg-rose-600 text-white shadow-lg" : "text-slate-400 hover:text-slate-900"
               )}
             >
               <Archive size={14} />
               Archivados
             </button>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
-              placeholder="Buscar lead o proyecto..."
+              placeholder="Buscar por nombre o proyecto..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-64 shadow-sm"
+              className="bg-white border border-slate-200 rounded-2xl py-3 pl-11 pr-4 text-base md:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-full shadow-sm"
             />
           </div>
-          <button className="p-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-900 transition-colors shadow-sm">
-            <Filter size={20} />
-          </button>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="bg-white border border-zinc-200 rounded-3xl overflow-hidden shadow-sm">
+        {/* Mobile View: Cards */}
+        <div className="md:hidden divide-y divide-zinc-100">
+          {isLoadingArchived ? (
+            <div className="p-12 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                <p className="text-xs text-slate-500 font-black uppercase tracking-widest">Cargando...</p>
+              </div>
+            </div>
+          ) : filteredLeads.length > 0 ? (
+            filteredLeads.map((lead) => (
+              <div key={lead.id} className="p-6 active:bg-zinc-50 transition-colors relative">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex flex-col min-w-0 pr-4">
+                    <span className="text-base font-black text-slate-900 tracking-tight truncate uppercase">{lead.lead_name}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{lead.project_name || 'Sin proyecto'}</span>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border shadow-sm shrink-0",
+                    lead.stage === 'Ingreso' ? "bg-blue-50 border-blue-200 text-blue-700" :
+                    lead.stage === 'Briefing' ? "bg-amber-50 border-amber-200 text-amber-700" :
+                    lead.stage === 'Propuesta' ? "bg-indigo-50 border-indigo-200 text-indigo-700" :
+                    "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  )}>
+                    {lead.stage}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Presupuesto</span>
+                    <span className="text-sm font-black text-slate-900">
+                      {lead.budget ? formatCurrency(lead.budget) : '---'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sentimiento</span>
+                    <span className={cn(
+                      "text-xs font-black uppercase tracking-tight",
+                      lead.sentiment_label === 'Entusiasta' ? "text-emerald-600" :
+                      lead.sentiment_label === 'Dudoso' ? "text-amber-600" :
+                      "text-rose-600"
+                    )}>
+                      {lead.sentiment_label || 'Sin datos'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-5 border-t border-zinc-50">
+                  <a 
+                    href={`tel:${lead.phone}`}
+                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-900 text-white h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 transition-all shadow-xl shadow-zinc-900/10"
+                  >
+                    <Phone size={14} />
+                    Llamar
+                  </a>
+                  {lead.email && (
+                    <a 
+                      href={`mailto:${lead.email}`}
+                      className="w-12 h-12 flex items-center justify-center bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-400 active:bg-zinc-100 active:text-zinc-900 transition-all"
+                    >
+                      <Mail size={18} />
+                    </a>
+                  )}
+                  {showArchived ? (
+                    <button 
+                      onClick={() => handleUnarchive(lead)}
+                      className="flex-1 bg-emerald-600 text-white h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-600/10 active:scale-95 transition-all"
+                    >
+                      Recuperar
+                    </button>
+                  ) : (
+                    <button className="w-12 h-12 flex items-center justify-center bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-400 active:bg-zinc-100 active:text-zinc-900 transition-all">
+                      <ExternalLink size={18} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-16 text-center text-zinc-400">
+              <Search size={32} className="mx-auto mb-3 opacity-20" />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em]">Sin resultados</p>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop View Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/50">

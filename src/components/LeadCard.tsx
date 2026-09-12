@@ -177,17 +177,23 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
           </span>
         </div>
 
-        {/* Info Secundaria Compacta: Lead Name + Sentimiento */}
-        <div className="flex items-center justify-between gap-2 text-xs">
+        {/* Info Secundaria Compacta: Lead Name + Sentimiento + Etapa */}
+        <div className="flex items-center justify-between gap-2 text-xs mt-1">
           <span className="text-zinc-500 font-medium truncate">{lead.lead_name}</span>
-          <span className={cn(
-            "px-2 py-0.5 rounded-full font-bold uppercase tracking-widest text-[9px] border",
-            lead.sentiment_label === 'Entusiasta' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
-            lead.sentiment_label === 'Dudoso' ? 'bg-amber-100 text-amber-800 border-amber-200' : 
-            'bg-rose-100 text-rose-800 border-rose-200'
-          )}>
-            {lead.sentiment_label}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Solo mostramos la etapa en móvil porque en desktop ya está en su columna */}
+            <span className="md:hidden px-2 py-0.5 rounded-full font-bold uppercase tracking-widest text-[9px] border bg-slate-50 text-slate-500 border-slate-200">
+              {lead.stage}
+            </span>
+            <span className={cn(
+              "px-2 py-0.5 rounded-full font-bold uppercase tracking-widest text-[9px] border",
+              lead.sentiment_label === 'Entusiasta' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
+              lead.sentiment_label === 'Dudoso' ? 'bg-amber-100 text-amber-800 border-amber-200' : 
+              'bg-rose-100 text-rose-800 border-rose-200'
+            )}>
+              {lead.sentiment_label}
+            </span>
+          </div>
         </div>
 
         {/* Main Action Button (Propuesta / Ingreso sin presupuesto) */}
@@ -211,38 +217,42 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
                 e.stopPropagation();
                 handleWhatsApp();
               }}
-              className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors group relative"
+              className="p-3 md:p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors group relative min-w-[44px] min-h-[44px] flex items-center justify-center"
               title="Contactar por WhatsApp"
             >
-              <MessageSquare size={16} className="group-hover:scale-110 transition-transform" />
+              <MessageSquare size={18} className="md:w-4 group-hover:scale-110 transition-transform" />
               {lead.whatsapp_interaction_count && lead.whatsapp_interaction_count > 0 && (
-                <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center border border-white">
+                <span className="absolute top-1 right-1 bg-emerald-500 text-white text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white">
                   {lead.whatsapp_interaction_count}
                 </span>
               )}
             </button>
-
-            {/* Cost of Wait Badge (Small) - EN HOLD */}
-            {/* {isDelayed && (
-              <div className={cn(
-                "ml-2 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 font-mono",
-                getCostOfWaitStyles(costOfWait)
-              )}>
-                <span>{formatCurrency(costOfWait)}</span>
-              </div>
-            )} */}
           </div>
           
-          {/* Botón de detalle */}
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectLead(lead);
-            }}
-            className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ExternalLink size={16} />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Mobile-only Stage Mover */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                // Logic to show stage mover or just open detail which has it
+                onSelectLead(lead);
+              }}
+              className="md:hidden p-3 text-zinc-400 hover:bg-zinc-50 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <TrendingUp size={18} />
+            </button>
+
+            {/* Botón de detalle */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectLead(lead);
+              }}
+              className="p-3 md:p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            >
+              <ExternalLink size={18} className="md:w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

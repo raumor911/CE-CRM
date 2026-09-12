@@ -107,7 +107,7 @@ export const ActivityModal: React.FC<ActivityModalProps> = ({ leadId, onClose, o
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="¿Qué sucedió en esta interacción?"
-              className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl p-4 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[120px] resize-none"
+              className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl p-4 text-base md:text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 min-h-[120px] resize-none"
             />
           </div>
 

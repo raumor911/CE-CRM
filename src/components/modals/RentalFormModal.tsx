@@ -264,7 +264,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                         required
                         type="text"
                         placeholder="Ej: Constructora ABC"
-                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-base md:text-sm text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                         value={formData.customer_name}
                         onChange={e => setFormData({ ...formData, customer_name: e.target.value })}
                       />
@@ -301,7 +301,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                     <input
                       type="tel"
                       placeholder="+52 55..."
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-base md:text-sm text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.customer_phone}
                       onChange={e => setFormData({ ...formData, customer_phone: e.target.value })}
                     />
@@ -316,7 +316,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                     <input
                       type="text"
                       placeholder="Ej: Obra Central"
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-base md:text-sm text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.project_name}
                       onChange={e => setFormData({ ...formData, project_name: e.target.value })}
                     />
@@ -328,7 +328,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                     <input
                       type="text"
                       placeholder="Dirección o referencia"
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-base md:text-sm text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.location}
                       onChange={e => setFormData({ ...formData, location: e.target.value })}
                     />
@@ -343,7 +343,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                     <input
                       required
                       type="date"
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-base md:text-sm text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.start_date}
                       onChange={e => setFormData({ ...formData, start_date: e.target.value })}
                     />
@@ -356,7 +356,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                       required
                       id="field-contractual_end_date"
                       type="date"
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-base md:text-sm text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.contractual_end_date}
                       onChange={e => setFormData({ ...formData, contractual_end_date: e.target.value })}
                     />
@@ -389,7 +389,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                             required
                             type="text"
                             placeholder="Ej: Contenedor 20ft Oficina"
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 bg-white text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                            className="w-full px-3 py-2 text-base rounded-lg border border-zinc-200 bg-white text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none"
                             value={item.equipment_description}
                             onChange={e => handleItemChange(index, 'equipment_description', e.target.value)}
                           />
@@ -402,7 +402,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                             required
                             type="number"
                             min="1"
-                            className="w-full px-3 py-2 text-sm rounded-lg border border-zinc-200 bg-white text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                            className="w-full px-3 py-2 text-base rounded-lg border border-zinc-200 bg-white text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none"
                             value={item.quantity}
                             onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}
                           />
@@ -417,7 +417,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                               type="number"
                               min="0"
                               step="0.01"
-                              className="w-full pl-6 pr-2 py-2 text-sm rounded-lg border border-zinc-200 bg-white text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                              className="w-full pl-6 pr-2 py-2 text-base rounded-lg border border-zinc-200 bg-white text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none"
                               value={item.subtotal_monthly}
                               onChange={e => handleItemChange(index, 'subtotal_monthly', Number(e.target.value))}
                             />

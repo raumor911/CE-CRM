@@ -7,6 +7,7 @@ import { ContainerIcon } from './icons/BrandIcons';
 import { 
   Building2, 
   Calendar, 
+  X,
   AlertTriangle, 
   DollarSign,
   Search,
@@ -35,7 +36,7 @@ import {
   ChevronRight,
   CornerDownRight
 } from 'lucide-react';
-import { formatCurrency, buildWhatsAppUrl, formatLocalDate, formatDateTime, formatShortDate, parseLocalDate } from '../lib/utils';
+import { cn, formatCurrency, buildWhatsAppUrl, formatLocalDate, formatDateTime, formatShortDate, parseLocalDate } from '../lib/utils';
 import {
   cleanCustomerName,
   normalizeCustomerName,
@@ -43,6 +44,7 @@ import {
 import { format, differenceInDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
+import { RentalDetailPanel } from './rentals/RentalDetailPanel';
 
 
 
@@ -128,6 +130,7 @@ export const RentalsView: React.FC = () => {
   const [paymentValidationModalOpen, setPaymentValidationModalOpen] = useState(false);
   const [paymentDetailModalOpen, setPaymentDetailModalOpen] = useState(false);
   const [paymentStatusTarget, setPaymentStatusTarget] = useState<'current' | 'pending_confirmation'>('current');
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
   
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [newPhone, setNewPhone] = useState('');
@@ -177,6 +180,15 @@ export const RentalsView: React.FC = () => {
   };
   
   const activeFiltersCount = Object.values(filters).filter(v => v !== 'all' && v !== '').length;
+
+  const FilterChip: React.FC<{ label: string; onClear: () => void }> = ({ label, onClear }) => (
+    <div className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 border border-indigo-100 rounded-lg text-[10px] font-bold text-indigo-700 animate-in fade-in slide-in-from-left-2">
+      <span>{label}</span>
+      <button onClick={onClear} className="hover:text-indigo-900 transition-colors">
+        <X size={10} />
+      </button>
+    </div>
+  );
 
   useEffect(() => {
     fetchRentals();
@@ -534,34 +546,36 @@ export const RentalsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-auto bg-gray-50 min-h-screen font-sans text-gray-900 relative">
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
+    <div className="flex-1 overflow-auto bg-zinc-50 min-h-screen font-sans text-zinc-900 relative pb-20 md:pb-0">
+      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
         
-        <div className="flex justify-end items-center">
+        <div className="flex justify-between items-center safe-top">
+          <h1 className="text-xl md:text-2xl font-black text-zinc-900 uppercase tracking-tight md:hidden">Rentas</h1>
+          <div className="flex-1" />
           <button 
             onClick={() => { setEditingRentalId(null); setIsFormOpen(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-zinc-900/10 transition-all active:scale-95"
           >
-            <Plus className="w-4 h-4" /> Nueva Renta
+            <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Nueva Renta</span>
           </button>
         </div>
 
         {/* Top KPI Bar - Grid Responsivo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <KpiCard title="Rentas activas" value={activeCount.toString()} icon={<Building2 className="w-3.5 h-3.5 text-blue-600" />} color="blue" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiCard title="Rentas activas" value={activeCount.toString()} icon={<Building2 className="w-4 h-4 text-blue-600" />} color="blue" />
           <KpiCard 
-            title="Vencen en 60 días" 
+            title="Vencen en 60d" 
             value={expiring60DaysCount.toString()} 
-            icon={<Calendar className="w-3.5 h-3.5 text-orange-600" />} 
+            icon={<Calendar className="w-4 h-4 text-orange-600" />} 
             color="orange" 
           />
           <KpiCard 
-            title="Pagos por confirmar" 
+            title="Por confirmar" 
             value={payments.filter(p => p.status === 'pending_confirmation').length.toString()} 
-            icon={payments.filter(p => p.status === 'pending_confirmation').length > 0 ? <CreditCard className="w-3.5 h-3.5 text-amber-600" /> : <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />} 
+            icon={payments.filter(p => p.status === 'pending_confirmation').length > 0 ? <CreditCard className="w-4 h-4 text-amber-600" /> : <CheckCircle2 className="w-4 h-4 text-green-600" />} 
             color={payments.filter(p => p.status === 'pending_confirmation').length > 0 ? "amber" : "green"} 
           />
-          <KpiCard title="Valor mensual activo" value={formatCurrency(totalMonthlyWithVAT)} icon={<DollarSign className="w-3.5 h-3.5 text-green-600" />} color="green" />
+          <KpiCard title="Valor mensual" value={formatCurrency(totalMonthlyWithVAT)} icon={<DollarSign className="w-4 h-4 text-green-600" />} color="green" />
         </div>
 
         {/* Main Grid */}
@@ -571,82 +585,75 @@ export const RentalsView: React.FC = () => {
           <div className="lg:col-span-8 space-y-6">
             
             {/* Sección 1: Seguimiento de Pagos */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-              <div className="border-b border-gray-100 px-4 pt-4 pb-3">
-                <h2 className="text-sm font-semibold text-gray-900 capitalize">Seguimiento de pagos · {currentMonthName}</h2>
+            <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+              <div className="border-b border-zinc-100 px-4 pt-5 pb-4">
+                <h2 className="text-sm font-black text-zinc-900 uppercase tracking-tight">Seguimiento de pagos · {currentMonthName}</h2>
                 
-                {/* Resumen Mensual */}
-                <div className="grid grid-cols-4 gap-4 mt-4 mb-2">
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-1">Importe esperado</p>
-                    <p className="text-lg font-bold text-gray-900">{formatCurrency(expected)}</p>
+                {/* Resumen Mensual - Scrollable on mobile if needed, but 2x2 is better */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 mb-2">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Esperado</p>
+                    <p className="text-lg font-black text-zinc-900">{formatCurrency(expected)}</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-1">Importe confirmado</p>
-                    <p className="text-lg font-bold text-green-600">{formatCurrency(confirmed)}</p>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Confirmado</p>
+                    <p className="text-lg font-black text-emerald-600">{formatCurrency(confirmed)}</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-1">Importe pendiente</p>
-                    <p className="text-lg font-bold text-amber-600">{formatCurrency(pending)}</p>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Pendiente</p>
+                    <p className="text-lg font-black text-amber-600">{formatCurrency(pending)}</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-1">Avance</p>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Avance</p>
                     <div className="flex items-center gap-2">
-                      <p className="text-lg font-bold text-blue-600">{Math.round(progress)}%</p>
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                      <p className="text-lg font-black text-indigo-600">{Math.round(progress)}%</p>
+                      <div className="flex-1 h-2 bg-zinc-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-indigo-600 rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }}></div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-4 mt-4">
-                  <button onClick={() => setPaymentTab('pendientes')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${paymentTab === 'pendientes' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Pendientes</button>
-                  <button onClick={() => setPaymentTab('confirmados')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${paymentTab === 'confirmados' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Confirmados</button>
-                  <button onClick={() => setPaymentTab('todos')} className={`text-[11px] font-medium pb-2 border-b-2 transition-colors ${paymentTab === 'todos' ? 'text-blue-600 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>Todos</button>
+                <div className="flex gap-6 mt-6 overflow-x-auto scrollbar-hide">
+                  <button onClick={() => setPaymentTab('pendientes')} className={cn("text-xs font-bold pb-2 border-b-2 transition-all whitespace-nowrap", paymentTab === 'pendientes' ? 'text-zinc-900 border-zinc-900' : 'text-zinc-400 border-transparent hover:text-zinc-600')}>Pendientes</button>
+                  <button onClick={() => setPaymentTab('confirmados')} className={cn("text-xs font-bold pb-2 border-b-2 transition-all whitespace-nowrap", paymentTab === 'confirmados' ? 'text-zinc-900 border-zinc-900' : 'text-zinc-400 border-transparent hover:text-zinc-600')}>Confirmados</button>
+                  <button onClick={() => setPaymentTab('todos')} className={cn("text-xs font-bold pb-2 border-b-2 transition-all whitespace-nowrap", paymentTab === 'todos' ? 'text-zinc-900 border-zinc-900' : 'text-zinc-400 border-transparent hover:text-zinc-600')}>Todos</button>
                 </div>
               </div>
-              <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+
+              {/* Desktop View Table */}
+              <div className="hidden md:block overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
                 <table className="w-full text-left text-xs whitespace-nowrap">
-                  <thead className="bg-gray-50/50 text-gray-500 sticky top-0 z-10 backdrop-blur-sm">
+                  <thead className="bg-zinc-50/50 text-zinc-500 sticky top-0 z-10 backdrop-blur-sm">
                     <tr>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Cliente</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Fecha de pago</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Importe esperado</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Acción</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest">Cliente</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest">Vencimiento</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest text-right">Importe</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest text-right">Acciones</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-zinc-100">
                     {filteredPayments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500 text-xs">No hay pagos para mostrar en esta pestaña.</td>
+                        <td colSpan={4} className="px-6 py-12 text-center text-zinc-500 text-xs italic">No hay registros para mostrar.</td>
                       </tr>
                     ) : (
                       filteredPayments.map((payment) => {
                         const isConfirmed = payment.status === 'confirmed';
-                        const followUp = followUpsMap[payment.id];
-                        let followUpText = 'Sin seguimiento';
-                        if (isConfirmed && payment.confirmed_at) {
-                          followUpText = `Confirmado el ${format(new Date(payment.confirmed_at), 'dd/MM/yyyy')}`;
-                        } else if (followUp) {
-                          const fType = followUp.previous_data?.follow_up_type || 'Seguimiento';
-                          followUpText = `${fType} · ${formatShortDate(followUp.created_at)}`;
-                        }
-
                         return (
-                          <tr key={payment.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedRentalId(payment.rental_id)}>
-                            <td className="px-4 py-2.5 font-medium text-gray-900">{payment.client}</td>
-                            <td className="px-4 py-2.5 text-gray-600">
+                          <tr key={payment.id} className="hover:bg-zinc-50 transition-colors cursor-pointer group" onClick={() => setSelectedRentalId(payment.rental_id)}>
+                            <td className="px-6 py-4 font-bold text-zinc-900">{payment.client}</td>
+                            <td className="px-6 py-4 text-zinc-600">
                               <div className="flex items-center gap-2">
                                 <span>{format(parseLocalDate(payment.payment_due_date) || new Date(), 'dd/MM/yyyy')}</span>
                                 {payment.status === 'pending_confirmation' && payment.payment_due_date && (parseLocalDate(payment.payment_due_date)?.getTime() || Infinity) < new Date().setHours(0,0,0,0) && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">Vencido</span>
+                                  <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter bg-rose-500/10 text-rose-600">Vencido</span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-4 py-2.5 text-gray-900 font-medium text-right">{formatCurrency(payment.expected_amount)}</td>
-                            <td className="px-4 py-2.5 text-right space-x-2">
-                              {!isConfirmed && (
+                            <td className="px-6 py-4 text-zinc-900 font-bold text-right">{formatCurrency(payment.expected_amount)}</td>
+                            <td className="px-6 py-4 text-right space-x-2">
+                              {!isConfirmed ? (
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -654,19 +661,18 @@ export const RentalsView: React.FC = () => {
                                     setPaymentStatusTarget('current');
                                     setPaymentValidationModalOpen(true);
                                   }}
-                                  className="text-[10px] font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded transition-colors inline-flex items-center justify-center"
+                                  className="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-all active:scale-95"
                                 >
                                   Validar pago
                                 </button>
-                              )}
-                              {isConfirmed && (
+                              ) : (
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setPaymentToValidate(payment);
                                     setPaymentDetailModalOpen(true);
                                   }}
-                                  className="text-[10px] font-medium text-gray-600 border border-gray-200 hover:bg-gray-100 px-2 py-1 rounded transition-colors inline-flex items-center justify-center"
+                                  className="text-[10px] font-bold text-zinc-600 bg-zinc-100 hover:bg-zinc-200 px-3 py-1.5 rounded-lg transition-all active:scale-95"
                                 >
                                   Ver detalle
                                 </button>
@@ -679,48 +685,216 @@ export const RentalsView: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile View Cards */}
+              <div className="md:hidden divide-y divide-zinc-100">
+                {filteredPayments.length === 0 ? (
+                  <div className="p-8 text-center text-zinc-500 text-xs italic">No hay registros para mostrar.</div>
+                ) : (
+                  filteredPayments.map((payment) => {
+                    const isConfirmed = payment.status === 'confirmed';
+                    const isVencido = payment.status === 'pending_confirmation' && payment.payment_due_date && (parseLocalDate(payment.payment_due_date)?.getTime() || Infinity) < new Date().setHours(0,0,0,0);
+                    
+                    return (
+                      <motion.div 
+                        key={payment.id} 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-5 active:bg-zinc-50 transition-all"
+                        onClick={() => {
+                          setSelectedRentalId(payment.rental_id);
+                          setIsMobileDetailOpen(true);
+                        }}
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="min-w-0 pr-2">
+                            <h3 className="font-black text-zinc-900 text-base truncate uppercase tracking-tight">{payment.client}</h3>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                                <Calendar size={12} />
+                                {format(parseLocalDate(payment.payment_due_date) || new Date(), 'dd/MM/yyyy')}
+                              </span>
+                              {isVencido && (
+                                <span className="px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter bg-rose-50 text-rose-600 border border-rose-100 shadow-sm">Vencido</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-black text-zinc-900 text-base">{formatCurrency(payment.expected_amount)}</p>
+                            <span className={cn(
+                              "inline-block px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest mt-1.5 border shadow-sm",
+                              isConfirmed ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
+                            )}>
+                              {isConfirmed ? 'Confirmado' : 'Pendiente'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2.5">
+                          {!isConfirmed ? (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPaymentToValidate(payment);
+                                setPaymentStatusTarget('current');
+                                setPaymentValidationModalOpen(true);
+                              }}
+                              className="flex-1 bg-zinc-900 text-white text-[10px] font-black uppercase tracking-[0.2em] py-4 rounded-2xl active:scale-95 transition-all shadow-xl shadow-zinc-900/10 flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle2 size={16} />
+                              Validar pago
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPaymentToValidate(payment);
+                                setPaymentDetailModalOpen(true);
+                              }}
+                              className="flex-1 bg-zinc-100 text-zinc-900 text-[10px] font-black uppercase tracking-[0.2em] py-4 rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                              <Eye size={16} />
+                              Ver detalle
+                            </button>
+                          )}
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rental = rentals.find(r => r.id === payment.rental_id);
+                              if (rental?.customer_phone) {
+                                window.open(buildWhatsAppUrl(rental.customer_phone, `Hola ${rental.customer_name}, te contacto de Creativos Espacios referente al pago de la renta de ${format(parseLocalDate(payment.payment_due_date) || new Date(), 'MMMM')}...`), '_blank');
+                              }
+                            }}
+                            className="w-14 h-12 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-2xl active:bg-emerald-100 transition-all border border-emerald-100 shadow-sm shadow-emerald-600/5"
+                          >
+                            <MessageCircle size={20} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
             {/* Sección 2: Directorio de Rentas (Tabla Principal) */}
-            <div id="directorio-rentas" className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col">
-              <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-sm font-semibold text-gray-900">Directorio de Rentas</h2>
-                
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input 
-                      type="text"
-                      placeholder="Buscar cliente, proyecto, contenedor..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-8 pr-3 py-1.5 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-64 transition-all bg-gray-50 focus:bg-white"
-                    />
-                  </div>
-                  
-                  <div className="relative">
+            <div id="directorio-rentas" className="bg-white border border-zinc-200 rounded-3xl shadow-sm flex flex-col overflow-hidden mb-20 md:mb-0">
+              {/* Header & Filters - Mobile First */}
+              <div className="p-4 md:p-6 border-b border-zinc-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-black text-zinc-900 uppercase tracking-tight">Directorio de Rentas</h2>
+                  <div className="md:hidden">
                     <button 
                       onClick={() => setIsFilterOpen(!isFilterOpen)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium border rounded-md transition-colors ${activeFiltersCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border rounded-xl transition-all active:scale-95",
+                        activeFiltersCount > 0 ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "bg-white border-zinc-200 text-zinc-700 shadow-sm"
+                      )}
                     >
                       <Filter className="w-3.5 h-3.5" />
                       Filtros
                       {activeFiltersCount > 0 && (
-                        <span className="bg-blue-600 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center ml-1">
+                        <span className="bg-indigo-600 text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center ml-0.5">
                           {activeFiltersCount}
                         </span>
                       )}
                     </button>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-zinc-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input 
+                      type="text"
+                      placeholder="Buscar cliente o proyecto..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-11 pr-4 py-3 md:py-2 text-base md:text-sm border border-zinc-200 rounded-2xl md:rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 w-full transition-all bg-zinc-50 focus:bg-white"
+                    />
+                  </div>
+                  
+                  <div className="hidden md:block relative">
+                    <button 
+                      onClick={() => setIsFilterOpen(!isFilterOpen)}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 text-xs font-bold border rounded-xl transition-all active:scale-95 hover:bg-zinc-50",
+                        activeFiltersCount > 0 ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "bg-white border-zinc-200 text-zinc-700 shadow-sm"
+                      )}
+                    >
+                      <Filter className="w-4 h-4" />
+                      Filtros
+                      {activeFiltersCount > 0 && (
+                        <span className="bg-indigo-600 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center ml-1">
+                          {activeFiltersCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </div>
 
-                    {isFilterOpen && (
-                      <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4">
+                {/* Chips de filtros activos */}
+                <AnimatePresence>
+                  {activeFiltersCount > 0 && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="flex flex-wrap gap-2 pt-1"
+                    >
+                      {filters.status !== 'all' && (
+                        <FilterChip label={filters.status === 'active' ? 'Activas' : filters.status === 'completed' ? 'Finalizadas' : 'Canceladas'} onClear={() => setFilters(prev => ({ ...prev, status: 'all' }))} />
+                      )}
+                      {filters.payment !== 'all' && (
+                        <FilterChip label={filters.payment === 'current' ? 'Al corriente' : filters.payment === 'pending_confirmation' ? 'Pendiente' : 'Sin pago'} onClear={() => setFilters(prev => ({ ...prev, payment: 'all' }))} />
+                      )}
+                      {filters.expiration !== 'all' && (
+                        <FilterChip label={filters.expiration === 'expired' ? 'Vencido' : 'Próximo a vencer'} onClear={() => setFilters(prev => ({ ...prev, expiration: 'all' }))} />
+                      )}
+                      <button onClick={clearFilters} className="text-[10px] font-black text-rose-500 uppercase tracking-widest ml-auto py-1">Limpiar</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Sidebar / Bottom Sheet de Filtros */}
+              <AnimatePresence>
+                {isFilterOpen && (
+                  <>
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setIsFilterOpen(false)}
+                      className="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm z-[100]"
+                    />
+                    <motion.div 
+                      initial={{ x: '100%' }}
+                      animate={{ x: 0 }}
+                      exit={{ x: '100%' }}
+                      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                      className="fixed top-0 right-0 h-screen w-full max-w-[360px] bg-white shadow-2xl z-[101] flex flex-col"
+                    >
+                      <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                            <Filter size={18} />
+                          </div>
+                          <h3 className="font-black text-zinc-900 uppercase tracking-tight">Filtros de Rentas</h3>
+                        </div>
+                        <button onClick={() => setIsFilterOpen(false)} className="p-2 hover:bg-zinc-100 rounded-xl text-zinc-400 transition-all">
+                          <X size={20} />
+                        </button>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto p-6 space-y-8">
                         <div className="space-y-4">
-                          <div>
-                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Estado de renta</label>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Estado de renta</label>
                             <select 
                               value={tempFilters.status}
                               onChange={(e) => setTempFilters({...tempFilters, status: e.target.value})}
-                              className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-full py-3.5 px-4 text-base md:text-sm border border-zinc-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-zinc-50"
                             >
                               <option value="all">Todos</option>
                               <option value="active">Activas</option>
@@ -729,12 +903,12 @@ export const RentalsView: React.FC = () => {
                             </select>
                           </div>
                           
-                          <div>
-                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Estado de pago</label>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Estado de pago</label>
                             <select 
                               value={tempFilters.payment}
                               onChange={(e) => setTempFilters({...tempFilters, payment: e.target.value})}
-                              className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-full py-3.5 px-4 text-base md:text-sm border border-zinc-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-zinc-50"
                             >
                               <option value="all">Todos</option>
                               <option value="current">Al corriente</option>
@@ -743,12 +917,12 @@ export const RentalsView: React.FC = () => {
                             </select>
                           </div>
 
-                          <div>
-                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Vencimiento</label>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Vencimiento</label>
                             <select 
                               value={tempFilters.expiration}
                               onChange={(e) => setTempFilters({...tempFilters, expiration: e.target.value})}
-                              className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-full py-3.5 px-4 text-base md:text-sm border border-zinc-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-zinc-50"
                             >
                               <option value="all">Todos</option>
                               <option value="8-60">Vence entre 8 y 60 días</option>
@@ -757,68 +931,58 @@ export const RentalsView: React.FC = () => {
                               <option value="none">Sin fecha contractual</option>
                             </select>
                           </div>
-
-                          <div>
-                            <label className="block text-[11px] font-medium text-gray-700 mb-1">Tipo o descripción de contenedor</label>
-                            <input 
-                              type="text"
-                              placeholder="Ej. Laptop, Monitor..."
-                              value={tempFilters.equipment}
-                              onChange={(e) => setTempFilters({...tempFilters, equipment: e.target.value})}
-                              className="w-full py-1.5 px-2 text-[11px] border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-gray-100">
-                          <button 
-                            onClick={clearFilters}
-                            className="px-3 py-1.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
-                          >
-                            Limpiar
-                          </button>
-                          <button 
-                            onClick={applyFilters}
-                            className="px-3 py-1.5 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                          >
-                            Aplicar
-                          </button>
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs whitespace-nowrap">
-                  <thead className="bg-gray-50/80 text-gray-500 border-b border-gray-100">
+                      <div className="p-6 border-t border-zinc-100 bg-zinc-50/50 space-y-3 safe-bottom">
+                        <button 
+                          onClick={applyFilters}
+                          className="w-full py-4 bg-zinc-900 hover:bg-zinc-800 text-white font-black uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl shadow-zinc-900/10 text-xs"
+                        >
+                          Mostrar Resultados
+                        </button>
+                        <button 
+                          onClick={clearFilters}
+                          className="w-full py-3 text-xs font-bold text-zinc-500 hover:bg-zinc-100 rounded-2xl transition-all uppercase tracking-widest"
+                        >
+                          Limpiar Filtros
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+
+              <div className="overflow-x-auto custom-scrollbar">
+                {/* Desktop View Table */}
+                <table className="hidden md:table w-full text-left text-xs whitespace-nowrap">
+                  <thead className="bg-zinc-50/80 text-zinc-500 border-b border-zinc-100">
                     <tr>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Cliente / Proyecto</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Contenedor y cantidad</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Inicio</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Vencimiento</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider text-right">Importe</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Pago</th>
-                      <th className="px-4 py-2 font-medium text-[10px] uppercase tracking-wider">Estado</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest">Cliente / Proyecto</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest">Equipos</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest">Inicio</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest">Vencimiento</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest text-right">Importe</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest">Pago</th>
+                      <th className="px-6 py-3 font-bold text-[10px] uppercase tracking-widest">Estado</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-zinc-50">
                     {loading ? (
                       Array.from({ length: 5 }).map((_, i) => (
-                        <tr key={i} className="animate-pulse">
-                          <td className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-3/4 mb-1"></div><div className="h-2 bg-gray-100 rounded w-1/2"></div></td>
-                          <td className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-16"></div></td>
-                          <td className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-16"></div></td>
-                          <td className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-16"></div></td>
-                          <td className="px-4 py-3"><div className="h-3 bg-gray-200 rounded w-16 ml-auto"></div></td>
-                          <td className="px-4 py-3"><div className="h-4 bg-gray-200 rounded-full w-16"></div></td>
-                          <td className="px-4 py-3"><div className="h-4 bg-gray-200 rounded-md w-12"></div></td>
+                        <tr key={i} className="animate-pulse hidden md:table-row">
+                          <td className="px-6 py-4"><div className="h-3 bg-zinc-200 rounded w-3/4 mb-1"></div><div className="h-2 bg-zinc-100 rounded w-1/2"></div></td>
+                          <td className="px-6 py-4"><div className="h-3 bg-zinc-200 rounded w-16"></div></td>
+                          <td className="px-6 py-4"><div className="h-3 bg-zinc-200 rounded w-16"></div></td>
+                          <td className="px-6 py-4"><div className="h-3 bg-zinc-200 rounded w-16"></div></td>
+                          <td className="px-6 py-4"><div className="h-3 bg-zinc-200 rounded w-16 ml-auto"></div></td>
+                          <td className="px-6 py-4"><div className="h-4 bg-zinc-200 rounded-full w-16"></div></td>
+                          <td className="px-6 py-4"><div className="h-4 bg-zinc-200 rounded-md w-12"></div></td>
                         </tr>
                       ))
                     ) : groupedRentals.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center text-gray-500">No se encontraron rentas.</td>
+                      <tr className="hidden md:table-row">
+                        <td colSpan={7} className="px-6 py-12 text-center text-zinc-500 text-xs italic">No se encontraron rentas.</td>
                       </tr>
                     ) : (
                       groupedRentals.map((group) => {
@@ -827,116 +991,253 @@ export const RentalsView: React.FC = () => {
 
                         return (
                           <React.Fragment key={group.key}>
-                            {/* Fila Principal / Consolidada */}
+                            {/* Desktop Row */}
                             <tr 
                               onClick={() => {
-                                if (hasMultiple) {
-                                  toggleGroup(group.key);
-                                } else {
+                                if (hasMultiple) toggleGroup(group.key);
+                                else {
                                   setSelectedRentalId(group.rentals[0].id);
+                                  if (window.innerWidth < 768) setIsMobileDetailOpen(true);
                                 }
                               }}
-                              className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${!hasMultiple && selectedRentalId === group.rentals[0].id ? 'bg-blue-50/30 ring-1 ring-inset ring-blue-500/20' : ''} ${hasMultiple ? 'bg-gray-50/30' : ''}`}
+                              className={cn(
+                                "hidden md:table-row hover:bg-indigo-50/30 transition-colors cursor-pointer group",
+                                hasMultiple ? "bg-zinc-50/30" : "",
+                                !hasMultiple && selectedRentalId === group.rentals[0].id ? "bg-indigo-50/50" : ""
+                              )}
                             >
-                              <td className="px-4 py-2.5">
-                                <div className="flex items-center gap-2">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
                                   {hasMultiple && (
-                                    <div className="text-gray-400">
+                                    <div className="text-zinc-400">
                                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                     </div>
                                   )}
                                   <div>
-                                    <div className="font-medium text-gray-900 text-xs flex items-center gap-2">
+                                    <div className="font-black text-zinc-900 text-xs uppercase tracking-tight flex items-center gap-2">
                                       {group.clientName}
                                       {hasMultiple && (
-                                        <span className="px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[9px] font-medium border border-blue-100">
+                                        <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest border border-indigo-100">
                                           {group.rentals.length} rentas
                                         </span>
                                       )}
                                     </div>
                                     {!hasMultiple && (
-                                      <div className="text-[10px] text-gray-500 mt-0.5 truncate max-w-[160px]">
+                                      <div className="text-[10px] text-zinc-500 font-bold mt-0.5 truncate max-w-[200px] uppercase">
                                         {[group.rentals[0].project_name, group.rentals[0].location].filter(Boolean).join(' - ') || 'Sin ubicación'}
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 py-2.5">
-                                <div className="flex items-center gap-1.5 text-gray-600 text-[11px]">
-                                  <ContainerIcon size={12} className="text-gray-500" />
-                                  {group.totalContainers > 0 ? (group.totalContainers === 1 ? '1 Contenedor' : `${group.totalContainers} Contenedores`) : 'Sin contenedores'}
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2 text-zinc-600 font-bold text-[10px] uppercase tracking-widest">
+                                  <Package size={14} className="text-zinc-400" />
+                                  {group.totalContainers}
                                 </div>
                               </td>
-                              <td className="px-4 py-2.5 text-gray-600 text-[11px]">
+                              <td className="px-6 py-4 text-zinc-500 font-bold text-[10px] uppercase tracking-widest">
                                 {formatLocalDate(group.earliestStartDate)}
                               </td>
-                              <td className="px-4 py-2.5 text-[11px]">
-                                <span className="text-gray-900 font-medium">
-                                  {hasMultiple && group.nearestEndDate ? 'Próximo: ' : ''}{formatLocalDate(group.nearestEndDate || group.rentals[0].contractual_end_date)}
+                              <td className="px-6 py-4 text-[10px] uppercase tracking-widest">
+                                <span className={cn(
+                                  "font-bold",
+                                  group.nearestEndDate && differenceInDays(parseLocalDate(group.nearestEndDate) || new Date(), startOfDay(new Date())) <= 30 ? "text-rose-600" : "text-zinc-900"
+                                )}>
+                                  {group.nearestEndDate ? formatLocalDate(group.nearestEndDate) : '-'}
                                 </span>
                               </td>
-                              <td className="px-4 py-2.5 text-right font-medium text-gray-900 text-[11px]">
+                              <td className="px-6 py-4 text-right font-black text-zinc-900 text-xs">
                                 {formatCurrency(group.totalAmount)}
                               </td>
-                              <td className="px-4 py-2.5">
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ring-1 ring-inset ${
-                                  group.paymentStatus === 'Al corriente' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 
-                                  group.paymentStatus === 'Sin pago este mes' ? 'bg-gray-50 text-gray-600 ring-gray-500/20' : 
-                                  'bg-amber-50 text-amber-700 ring-amber-600/20'
-                                }`}>
-                                  {group.paymentStatus === 'Al corriente' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                              <td className="px-6 py-4">
+                                <span className={cn(
+                                  "inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm",
+                                  group.paymentStatus === 'Al corriente' ? "bg-emerald-50 border-emerald-200 text-emerald-700" : 
+                                  group.paymentStatus === 'Sin pago este mes' ? "bg-zinc-50 border-zinc-200 text-zinc-600" : 
+                                  "bg-amber-50 border-amber-200 text-amber-700"
+                                )}>
+                                  {group.paymentStatus === 'Al corriente' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                                   {group.paymentStatus}
                                 </span>
                               </td>
-                              <td className="px-4 py-2.5">
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${group.rentalStatus === 'Activa' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : group.rentalStatus === 'Finalizada' ? 'bg-gray-100 text-gray-700 border-gray-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                              <td className="px-6 py-4 text-right">
+                                <span className={cn(
+                                  "inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm",
+                                  group.rentalStatus === 'Activa' ? "bg-indigo-50 border-indigo-200 text-indigo-700" : "bg-zinc-100 border-zinc-200 text-zinc-700"
+                                )}>
                                   {group.rentalStatus}
                                 </span>
                               </td>
                             </tr>
 
-                            {/* Filas Hijas */}
-                            {hasMultiple && isExpanded && group.rentals.map((rental, index) => {
-                              const equipmentCount = rental.items?.reduce((total, item) => total + (item.quantity || 0), 0) || 0;
+                            {/* Mobile Item Card */}
+                            <tr className="md:hidden">
+                              <td colSpan={7} className="p-0">
+                                <div className="flex flex-col divide-y divide-zinc-100">
+                                  <motion.div 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="p-5 bg-zinc-50/50 active:bg-zinc-100 transition-all flex items-center justify-between"
+                                    onClick={() => {
+                                      if (hasMultiple) toggleGroup(group.key);
+                                      else {
+                                        setSelectedRentalId(group.rentals[0].id);
+                                        setIsMobileDetailOpen(true);
+                                      }
+                                    }}
+                                  >
+                                    <div className="flex-1 min-w-0 pr-4">
+                                      <h3 className="font-black text-zinc-900 text-base uppercase tracking-tight truncate">{group.clientName}</h3>
+                                      <div className="flex items-center gap-3 mt-1.5">
+                                        <div className="flex items-center gap-1.5">
+                                          <Package size={12} className="text-zinc-400" />
+                                          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{group.totalContainers} equipos</span>
+                                        </div>
+                                        <span className="w-1 h-1 bg-zinc-300 rounded-full" />
+                                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{group.rentals.length} rentas</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                      <span className={cn(
+                                        "px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border shadow-sm",
+                                        group.pendingCount > 0 ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                                      )}>
+                                        {group.paymentStatus}
+                                      </span>
+                                      {hasMultiple && (
+                                        <motion.div
+                                          animate={{ rotate: isExpanded ? 180 : 0 }}
+                                          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                                        >
+                                          <ChevronDown size={18} className="text-zinc-400" />
+                                        </motion.div>
+                                      )}
+                                      {!hasMultiple && <ChevronRight size={18} className="text-zinc-300" />}
+                                    </div>
+                                  </motion.div>
+
+                                  <AnimatePresence>
+                                    {isExpanded && (
+                                      <motion.div 
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="divide-y divide-zinc-100 bg-white overflow-hidden"
+                                      >
+                                        {group.rentals.map((rental) => (
+                                          <div 
+                                            key={rental.id} 
+                                            className="p-5 pl-10 active:bg-zinc-50 transition-all relative"
+                                            onClick={() => {
+                                              setSelectedRentalId(rental.id);
+                                              setIsMobileDetailOpen(true);
+                                            }}
+                                          >
+                                            {hasMultiple && (
+                                              <div className="absolute left-4 top-6">
+                                                <CornerDownRight size={16} className="text-zinc-300" />
+                                              </div>
+                                            )}
+                                            <div className="flex justify-between items-start mb-3">
+                                              <div className="min-w-0 pr-4">
+                                                <p className="font-black text-zinc-800 text-sm uppercase tracking-tight truncate">{rental.project_name || 'Renta Individual'}</p>
+                                                <div className="flex items-center gap-1.5 mt-1">
+                                                  <MapPin size={10} className="text-zinc-400" />
+                                                  <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest truncate">{rental.location || 'Sin ubicación'}</p>
+                                                </div>
+                                              </div>
+                                              <div className="text-right shrink-0">
+                                                <p className="font-black text-zinc-900 text-sm">{formatCurrency(calculateTotal(rental))}</p>
+                                                <span className={cn(
+                                                  "px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest mt-1.5 inline-block border shadow-sm",
+                                                  getStatusColor(rental.status)
+                                                )}>
+                                                  {getStatusLabel(rental.status)}
+                                                </span>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-zinc-50">
+                                              <div className="flex items-center gap-4 text-[9px] text-zinc-500 font-black uppercase tracking-widest">
+                                                <div className="flex items-center gap-1.5">
+                                                  <Calendar size={12} className="text-zinc-400" />
+                                                  <span>{formatLocalDate(rental.start_date)}</span>
+                                                </div>
+                                                {rental.contractual_end_date && (
+                                                  <div className="flex items-center gap-1.5">
+                                                    <CalendarClock size={12} className="text-zinc-400" />
+                                                    <span className={cn(
+                                                      differenceInDays(parseLocalDate(rental.contractual_end_date) || new Date(), startOfDay(new Date())) <= 30 ? "text-rose-600" : ""
+                                                    )}>{formatLocalDate(rental.contractual_end_date)}</span>
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div className="w-8 h-8 flex items-center justify-center bg-zinc-50 text-zinc-400 rounded-lg">
+                                                <ChevronRight size={16} />
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              </td>
+                            </tr>
+
+                            {/* Filas Hijas (Solo Desktop) */}
+                            {hasMultiple && isExpanded && group.rentals.map((rental) => {
                               const pState = paymentStateMap.get(rental.id)?.state || 'not_applicable';
                               return (
                                 <tr 
                                   key={rental.id}
-                                  onClick={() => setSelectedRentalId(rental.id)}
-                                  className={`hover:bg-blue-50/50 transition-colors cursor-pointer group ${selectedRentalId === rental.id ? 'bg-blue-50/30 ring-1 ring-inset ring-blue-500/20' : ''}`}
+                                  onClick={() => {
+                                    setSelectedRentalId(rental.id);
+                                    if (window.innerWidth < 768) setIsMobileDetailOpen(true);
+                                  }}
+                                  className={cn(
+                                    "hidden md:table-row hover:bg-zinc-50 transition-colors cursor-pointer group",
+                                    selectedRentalId === rental.id ? "bg-zinc-50 ring-1 ring-inset ring-zinc-200" : ""
+                                  )}
                                 >
-                                  <td className="px-4 py-2 pl-8">
-                                    <div className="flex items-start gap-2">
-                                      <CornerDownRight size={12} className="text-gray-300 mt-0.5" />
-                                      <div>
-                                        <div className="font-medium text-gray-700 text-xs">
-                                          Renta {index + 1} · {[rental.project_name, rental.location].filter(Boolean).join(' - ') || 'Sin ubicación'}
-                                        </div>
+                                  <td className="px-6 py-3 pl-14">
+                                    <div className="flex items-center gap-3">
+                                      <CornerDownRight size={14} className="text-zinc-300" />
+                                      <div className="space-y-0.5">
+                                        <p className="font-bold text-zinc-600 text-[11px] uppercase tracking-tight">{rental.project_name || 'Renta Individual'}</p>
+                                        <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest truncate max-w-[200px]">{rental.location || 'Sin ubicación'}</p>
                                       </div>
                                     </div>
                                   </td>
-                                  <td className="px-4 py-2">
-                                    <div className="flex items-center gap-1.5 text-gray-500 text-[11px]">
-                                      {equipmentCount} {equipmentCount === 1 ? 'Contenedor' : 'Contenedores'}
+                                  <td className="px-6 py-3">
+                                    <div className="flex items-center gap-2 text-zinc-400 text-[10px] font-bold">
+                                      {rental.items?.reduce((s, i) => s + (i.quantity || 0), 0) || 0}
                                     </div>
                                   </td>
-                                  <td className="px-4 py-2 text-gray-500 text-[11px]">
+                                  <td className="px-6 py-3 text-zinc-400 text-[10px] font-bold">
                                     {formatLocalDate(rental.start_date)}
                                   </td>
-                                  <td className="px-4 py-2 text-[11px] text-gray-600">
-                                    {formatLocalDate(rental.contractual_end_date)}
+                                  <td className="px-6 py-3 text-zinc-400 text-[10px] font-bold">
+                                    {rental.contractual_end_date ? formatLocalDate(rental.contractual_end_date) : '-'}
                                   </td>
-                                  <td className="px-4 py-2 text-right font-medium text-gray-600 text-[11px]">
+                                  <td className="px-6 py-3 text-right text-zinc-500 font-bold text-[11px]">
                                     {formatCurrency(calculateTotal(rental))}
                                   </td>
-                                  <td className="px-4 py-2">
-                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ring-1 ring-inset ${getPaymentStatusColor(pState)}`}>
-                                      {getPaymentStatusLabel(pState)}
+                                  <td className="px-6 py-3">
+                                    <span className={cn(
+                                      "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter",
+                                      pState === 'confirmed' ? "text-emerald-700 bg-emerald-50" :
+                                      pState === 'pending' ? "text-amber-700 bg-amber-50" :
+                                      "text-zinc-500 bg-zinc-50"
+                                    )}>
+                                      {pState === 'confirmed' ? 'Confirmado' : pState === 'pending' ? 'Pendiente' : 'N/A'}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-2">
-                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium border ${getStatusColor(rental.status)}`}>
+                                  <td className="px-6 py-3 text-right">
+                                    <span className={cn(
+                                      "px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter border",
+                                      getStatusColor(rental.status)
+                                    )}>
                                       {getStatusLabel(rental.status)}
                                     </span>
                                   </td>
@@ -950,252 +1251,220 @@ export const RentalsView: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between text-[11px] text-gray-500">
+              <div className="px-6 py-4 border-t border-zinc-100 bg-zinc-50/50 flex items-center justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
                 <span>Mostrando {groupedRentals.length} clientes · {filteredRentals.length} rentas</span>
               </div>
             </div>
-
           </div>
 
           {/* Right Column (1/3) */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="hidden md:block lg:col-span-4 space-y-6">
             
             {/* Próximos Vencimientos */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-sm font-semibold text-gray-900">Próximos vencimientos</h2>
-                <button 
-                  onClick={() => document.getElementById('directorio-rentas')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-[11px] font-medium text-blue-600 hover:text-blue-700"
-                >
-                  Ver todos
-                </button>
+            <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-4 md:p-6 border-b border-zinc-100 flex items-center justify-between">
+                <h2 className="text-sm font-black text-zinc-900 uppercase tracking-tight">Próximos Vencimientos</h2>
+                <CalendarClock className="w-5 h-5 text-zinc-400" />
               </div>
-              <div className="space-y-4">
+              <div className="p-4 md:p-6">
                 {upcomingExpirations.length === 0 ? (
-                  <p className="text-xs text-gray-500 text-center py-4">No hay vencimientos próximos.</p>
+                  <div className="text-center py-8">
+                    <p className="text-xs text-zinc-500 italic">No hay vencimientos próximos.</p>
+                  </div>
                 ) : (
-                  upcomingExpirations.map((item, i) => (
-                    <div key={i} className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-1 -m-1 rounded transition-colors" onClick={() => setSelectedRentalId(item.rentalId)}>
-                      <div className="text-right w-12 shrink-0">
-                        <p className="text-xs font-semibold text-gray-900">{format(item.date, "dd")}</p>
-                        <p className="text-[10px] text-gray-500 uppercase">{format(item.date, "MMM", { locale: es })}</p>
+                  <div className="space-y-4">
+                    {upcomingExpirations.map((exp) => (
+                      <div 
+                        key={exp.rentalId}
+                        className="flex items-center gap-4 p-3 rounded-2xl border border-zinc-100 hover:border-zinc-200 transition-all cursor-pointer group"
+                        onClick={() => setSelectedRentalId(exp.rentalId)}
+                      >
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex flex-col items-center justify-center shrink-0 border",
+                          exp.urgency === 'red' ? "bg-rose-50 border-rose-100 text-rose-600" :
+                          exp.urgency === 'orange' ? "bg-amber-50 border-amber-100 text-amber-600" :
+                          "bg-zinc-50 border-zinc-100 text-zinc-600"
+                        )}>
+                          <span className="text-[10px] font-black">{format(exp.date, 'dd')}</span>
+                          <span className="text-[8px] font-bold uppercase">{format(exp.date, 'MMM', { locale: es })}</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-black text-zinc-900 uppercase tracking-tight truncate group-hover:text-indigo-600 transition-colors">{exp.client}</p>
+                          <p className="text-[10px] text-zinc-500 font-bold mt-0.5">Vence en {exp.days} {exp.days === 1 ? 'día' : 'días'}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs font-black text-zinc-900">{formatCurrency(exp.amount)}</p>
+                          <ChevronRight size={14} className="text-zinc-300 ml-auto mt-1" />
+                        </div>
                       </div>
-                      <div className="w-[2px] h-8 bg-gray-100 rounded-full relative">
-                        <div className={`absolute inset-0 rounded-full opacity-50 ${item.urgency === 'red' ? 'bg-red-500' : item.urgency === 'orange' ? 'bg-orange-500' : 'bg-yellow-500'}`}></div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-900 truncate">{item.client}</p>
-                        <p className="text-[10px] text-gray-500">{formatCurrency(item.amount)}</p>
-                      </div>
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md border shrink-0 ${
-                        item.urgency === 'red' ? 'bg-red-50 text-red-700 border-red-100' :
-                        item.urgency === 'orange' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                        'bg-yellow-50 text-yellow-700 border-yellow-100'
-                      }`}>
-                        {item.days} días
-                      </span>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Panel de Detalle Avanzado */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+            {/* Panel de Detalle Avanzado (Desktop Only) */}
+            <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm overflow-hidden flex flex-col sticky top-8">
               {selectedRental ? (
                 <>
-                  <div className="p-4 border-b border-gray-100 bg-gray-50/30">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${getStatusColor(selectedRental.status)}`}>
+                  <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
+                    <div className="flex justify-between items-start mb-4">
+                      <span className={cn(
+                        "inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm",
+                        getStatusColor(selectedRental.status)
+                      )}>
                         {getStatusLabel(selectedRental.status)}
                       </span>
                       <button 
                         onClick={() => { setEditingRentalId(selectedRental.id); setIsFormOpen(true); }}
-                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Editar">
-                        <Edit2 className="w-3.5 h-3.5" />
+                        className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-all"
+                      >
+                        <Edit2 size={16} />
                       </button>
                     </div>
-                    <h2 className="text-sm font-semibold text-gray-900 leading-tight">{selectedRental.customer_name}</h2>
-                    <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1.5">
+                    <h2 className="text-base font-black text-zinc-900 uppercase tracking-tight leading-tight">{selectedRental.customer_name}</h2>
+                    <p className="text-[10px] text-zinc-500 font-bold mt-2 flex items-center gap-2 uppercase">
                       <MapPin className="w-3 h-3" /> {[selectedRental.project_name, selectedRental.location].filter(Boolean).join(' - ') || 'Sin ubicación'}
                     </p>
-                    {selectedRental.customer_phone && (
-                      <p className="text-[11px] text-gray-500 mt-1 flex items-center gap-1.5">
-                        <Phone className="w-3 h-3" /> {selectedRental.customer_phone}
-                      </p>
-                    )}
                   </div>
 
-                  <div className="p-4 flex-1 overflow-y-auto space-y-5 text-sm">
-                    
+                  <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-8">
                     {/* Detalles Operativos */}
-                    <div className="grid grid-cols-2 gap-y-3 text-[11px]">
-                      <div>
-                        <p className="text-gray-500">Inicio</p>
-                        <p className="font-medium text-gray-900">{formatLocalDate(selectedRental.start_date)}</p>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-1">
+                        <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Inicio</p>
+                        <p className="text-xs font-black text-zinc-900">{formatLocalDate(selectedRental.start_date)}</p>
                       </div>
-                      <div>
-                        <p className="text-gray-500">Vencimiento</p>
-                        <p className="font-medium text-gray-900">{formatLocalDate(selectedRental.contractual_end_date)}</p>
+                      <div className="space-y-1">
+                        <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Vencimiento</p>
+                        <p className="text-xs font-black text-zinc-900">{formatLocalDate(selectedRental.contractual_end_date) || '-'}</p>
                       </div>
-                      <div>
-                        <p className="text-gray-500">Importe</p>
-                        <p className="font-medium text-gray-900">{formatCurrency(calculateTotal(selectedRental))}</p>
+                      <div className="space-y-1">
+                        <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Importe</p>
+                        <p className="text-xs font-black text-zinc-900">{formatCurrency(calculateTotal(selectedRental))}</p>
                       </div>
-                      <div>
-                        <p className="text-gray-500">Pago</p>
-                        <span className="font-medium text-gray-900 flex items-center gap-1">
+                      <div className="space-y-1">
+                        <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Estado Pago</p>
+                        <p className="text-xs font-black text-zinc-900">
                           {getPaymentStatusLabel(paymentStateMap.get(selectedRental.id)?.state || 'not_applicable')}
-                        </span>
+                        </p>
                       </div>
                     </div>
 
                     {/* Contenedores */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Contenedores asignados</p>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Equipos asignados</h3>
                         <button 
                           onClick={() => { setEditingItem(null); setItemModalOpen(true); }}
-                          className="text-[10px] text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
+                          className="text-[10px] text-indigo-600 font-bold hover:underline flex items-center gap-1 uppercase"
                         >
                           <Plus className="w-3 h-3" /> Agregar
                         </button>
                       </div>
-                      {selectedRental.items && selectedRental.items.length > 0 ? (
-                        <div className="space-y-2">
-                          {selectedRental.items.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-center bg-gray-50 px-2 py-1.5 rounded border border-gray-100 group">
-                              <span className="text-xs font-medium text-gray-700 truncate">{item.equipment_description || 'Contenedor'}</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-gray-500 bg-white px-1.5 rounded border border-gray-200">Cant: {item.quantity}</span>
-                                <div className="hidden group-hover:flex items-center gap-1">
-                                  <button onClick={() => { setEditingItem(item); setItemModalOpen(true); }} className="p-1 text-gray-400 hover:text-blue-600 rounded">
-                                    <Edit2 className="w-3 h-3" />
-                                  </button>
-                                  <button onClick={() => {
-                                    if(window.confirm('¿Seguro que deseas eliminar este contenedor?')) {
-                                      removeRentalItem(item.id, selectedRental.id);
-                                    }
-                                  }} className="p-1 text-gray-400 hover:text-red-600 rounded">
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
+                      <div className="space-y-2">
+                        {selectedRental.items && selectedRental.items.length > 0 ? (
+                          selectedRental.items.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center bg-zinc-50 p-3 rounded-xl border border-zinc-100 group">
+                              <span className="text-[11px] font-bold text-zinc-700 truncate">{item.equipment_description || 'Equipo'}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-black text-zinc-900 bg-white px-2 py-0.5 rounded-lg border border-zinc-200">x{item.quantity}</span>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => { setEditingItem(item); setItemModalOpen(true); }} className="p-1 text-zinc-400 hover:text-indigo-600"><Edit2 size={12} /></button>
+                                  <button onClick={() => { if(window.confirm('¿Eliminar equipo?')) removeRentalItem(item.id, selectedRental.id); }} className="p-1 text-zinc-400 hover:text-rose-600"><Trash2 size={12} /></button>
                                 </div>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-500 italic">No hay contenedores asignados</p>
-                      )}
+                          ))
+                        ) : (
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase italic text-center py-4 bg-zinc-50 rounded-xl border border-dashed border-zinc-200">Sin equipos</p>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Acciones (Renderizadas condicionalmente si hay teléfono/activa) */}
-                    <div className="border-t border-gray-100 pt-4">
-                      {selectedRental.customer_phone &&
-                        (() => {
-                          const customerPart = selectedRental.customer_name ? `Hola ${selectedRental.customer_name}, ` : '';
-                          const projectPart = selectedRental.project_name ? ` (${selectedRental.project_name})` : '';
-                          const defaultMsg = `${customerPart}te escribo de Creativos Espacios sobre tu renta${projectPart}.`;
-                          const waUrl = buildWhatsAppUrl(selectedRental.customer_phone, defaultMsg);
-                          return (
-                            <div className="space-y-2 mb-2">
-                              <a
-                                href={waUrl || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block text-center w-full py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-[11px] font-medium rounded-md transition-colors flex items-center justify-center gap-1.5 shadow-sm no-underline"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" /> Abrir WhatsApp
-                              </a>
-                            </div>
-                          );
-                        })()}
+                    {/* Acciones */}
+                    <div className="space-y-3 pt-4 border-t border-zinc-100">
+                      {selectedRental.customer_phone && (
+                        <button 
+                          onClick={() => {
+                            const msg = `Hola ${selectedRental.customer_name}, te contacto de Creativos Espacios referente a tu renta...`;
+                            window.open(buildWhatsAppUrl(selectedRental.customer_phone!, msg), '_blank');
+                          }}
+                          className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+                        >
+                          <MessageCircle size={16} /> WhatsApp
+                        </button>
+                      )}
                       
                       {selectedRental.status === 'active' && (
-                        <div className="grid grid-cols-3 gap-2">
-                          <button 
-                            onClick={() => setRenewModalOpen(true)}
-                            className="py-1.5 bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 text-[11px] font-medium rounded-md transition-colors">
-                            Renovar
-                          </button>
-                          <button 
-                            onClick={() => setCompleteModalOpen(true)}
-                            className="py-1.5 bg-green-50 text-green-700 border border-green-100 hover:bg-green-100 text-[11px] font-medium rounded-md transition-colors">
-                            <CheckSquare className="w-3.5 h-3.5 inline mr-1" /> Finalizar
-                          </button>
-                          <button 
-                            onClick={() => setCancelModalOpen(true)}
-                            className="py-1.5 bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 text-[11px] font-medium rounded-md transition-colors">
-                            <XCircle className="w-3.5 h-3.5 inline mr-1" /> Cancelar
-                          </button>
+                        <div className="grid grid-cols-1 gap-2">
+                          <button onClick={() => setRenewModalOpen(true)} className="w-full py-3 bg-zinc-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-zinc-900/10">Renovar</button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button onClick={() => setCompleteModalOpen(true)} className="py-3 bg-white border border-zinc-200 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all hover:bg-emerald-50">Finalizar</button>
+                            <button onClick={() => setCancelModalOpen(true)} className="py-3 bg-white border border-zinc-200 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all hover:bg-rose-50">Cancelar</button>
+                          </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Referencias Externas */}
-                    <div className="border-t border-gray-100 pt-4">
-                      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Referencias externas</p>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between p-1.5 hover:bg-gray-50 rounded cursor-pointer transition-colors group">
-                          <div className="flex items-center gap-2 text-[11px] text-gray-600">
-                            <FileText className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500" /> Contrato
-                          </div>
-                          {selectedRental.contract_reference_url ? (
-                            <a href={selectedRental.contract_reference_url} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
-                              Abrir documento
-                            </a>
-                          ) : (
-                            <span className="text-[10px] text-gray-400 italic">No enlazado</span>
-                          )}
-                        </div>
+                    {/* Historial */}
+                    <div className="space-y-4 pt-4 border-t border-zinc-100">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Actividad</h3>
+                        <button onClick={() => setFollowUpModalOpen(true)} className="text-zinc-400 hover:text-zinc-900"><Plus size={16} /></button>
                       </div>
-                    </div>
-
-                    {/* Historial de Actividad */}
-                    <div className="border-t border-gray-100 pt-4 pb-2">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                          <History className="w-3.5 h-3.5" /> Historial de Actividad
-                        </p>
-                        <button 
-                          onClick={() => setFollowUpModalOpen(true)}
-                          className="text-[10px] text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
-                        >
-                          <Plus className="w-3 h-3" /> Registrar
-                        </button>
-                      </div>
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {loadingActivities ? (
-                          <div className="text-center py-4 text-gray-400"><Clock className="w-4 h-4 animate-spin mx-auto" /></div>
+                          <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-zinc-300" /></div>
                         ) : activities.length === 0 ? (
-                          <p className="text-[10px] text-gray-500 italic text-center py-2">Sin actividad reciente</p>
+                          <p className="text-[10px] text-zinc-400 italic text-center uppercase font-bold">Sin actividad</p>
                         ) : (
                           activities.map(activity => (
-                            <div key={activity.id} className="relative pl-3 border-l-2 border-gray-100">
-                              <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-blue-400 ring-2 ring-white"></div>
-                              <p className="text-[10px] font-semibold text-gray-900">{activity.activity_type}</p>
-                              <p className="text-[10px] text-gray-600 mt-0.5 leading-snug">{activity.description}</p>
-                              <p className="text-[9px] text-gray-400 mt-1">{formatShortDate(activity.created_at)}</p>
+                            <div key={activity.id} className="relative pl-4 border-l border-zinc-100 space-y-1">
+                              <div className="absolute -left-[4.5px] top-1 w-2 h-2 rounded-full bg-zinc-300 border-2 border-white"></div>
+                              <p className="text-[10px] font-black text-zinc-900 uppercase">{activity.activity_type}</p>
+                              <p className="text-[10px] text-zinc-500 leading-snug">{activity.description}</p>
+                              <p className="text-[8px] text-zinc-400 font-bold uppercase">{formatShortDate(activity.created_at)}</p>
                             </div>
                           ))
                         )}
                       </div>
                     </div>
-
                   </div>
                 </>
               ) : (
-                <div className="p-6 text-center flex-1 flex flex-col items-center justify-center text-gray-500">
-                  <Building2 className="w-8 h-8 text-gray-300 mb-2" />
-                  <p className="text-xs">Selecciona una renta</p>
+                <div className="p-12 text-center flex flex-col items-center justify-center space-y-4 bg-zinc-50/50">
+                  <div className="w-16 h-16 bg-white rounded-3xl shadow-sm flex items-center justify-center text-zinc-200">
+                    <Building2 size={32} />
+                  </div>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Selecciona una renta</p>
                 </div>
               )}
             </div>
           </div>
-
         </div>
       </div>
+
+      {/* Mobile Detail Panel */}
+      <RentalDetailPanel 
+        rental={selectedRental}
+        isOpen={isMobileDetailOpen}
+        onClose={() => setIsMobileDetailOpen(false)}
+        onEdit={(id) => { setEditingRentalId(id); setIsFormOpen(true); }}
+        onRenew={(id) => { setSelectedRentalId(id); setRenewModalOpen(true); }}
+        onComplete={(id) => { setSelectedRentalId(id); setCompleteModalOpen(true); }}
+        onCancel={(id) => { setSelectedRentalId(id); setCancelModalOpen(true); }}
+        onAddActivity={(id) => { setSelectedRentalId(id); setFollowUpModalOpen(true); }}
+        onManageItems={(id) => { setSelectedRentalId(id); setItemModalOpen(true); }}
+        onUpdateContract={(id) => { setSelectedRentalId(id); setContractLinkModalOpen(true); }}
+        activities={activities}
+        loadingActivities={loadingActivities}
+        paymentStatus={selectedRental ? {
+          state: paymentStateMap.get(selectedRental.id)?.state || 'not_applicable',
+          label: getPaymentStatusLabel(paymentStateMap.get(selectedRental.id)?.state || 'not_applicable'),
+          color: getPaymentStatusColor(paymentStateMap.get(selectedRental.id)?.state || 'not_applicable')
+        } : undefined}
+      />
 
       {/* Modals */}
       <RentalFormModal 
@@ -1208,13 +1477,6 @@ export const RentalsView: React.FC = () => {
         onSubmit={async (rentalData, itemsData) => {
           if (editingRentalId) {
             await updateRental(editingRentalId, rentalData);
-            // Updating items can be tricky if we don't have item IDs.
-            // In RentalFormModal, we didn't support updating existing items with ID.
-            // But since the instruction says "En la vista de equipos (RentalDetailModal o RentalsView), permitir agregar, editar y eliminar equipos llamando a addRentalItem, updateRentalItem, removeRentalItem", we might not need to update items in the RentalFormModal.
-            // Actually, if we just pass the items, we can handle it if we want, but let's just update the main rental data here. 
-            // Wait, for full edit, maybe we don't update items in RentalFormModal? The instruction says:
-            // "6. En la vista de equipos (RentalDetailModal o RentalsView), permitir agregar, editar y eliminar equipos llamando a addRentalItem, updateRentalItem, removeRentalItem."
-            // So we'll handle item management in the detail view. 
           } else {
             await createRental(rentalData as any, itemsData as any);
           }
@@ -1231,7 +1493,7 @@ export const RentalsView: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Nueva fecha de vencimiento</label>
-                  <input type="date" value={renewDate} onChange={e => setRenewDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                  <input type="date" value={renewDate} onChange={e => setRenewDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
                   <button onClick={() => setRenewModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancelar</button>
@@ -1261,7 +1523,7 @@ export const RentalsView: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Fecha efectiva de finalización</label>
-                  <input type="date" value={completeDate} onChange={e => setCompleteDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <input type="date" value={completeDate} onChange={e => setCompleteDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Motivo / Notas (Opcional)</label>
@@ -1295,7 +1557,7 @@ export const RentalsView: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Fecha efectiva de cancelación</label>
-                  <input type="date" value={cancelDate} onChange={e => setCancelDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none" />
+                  <input type="date" value={cancelDate} onChange={e => setCancelDate(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-red-500 outline-none" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Motivo de cancelación</label>
@@ -1436,16 +1698,16 @@ export const RentalsView: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
-                    <input name="desc" required defaultValue={editingItem?.equipment_description} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input name="desc" required defaultValue={editingItem?.equipment_description} className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
-                      <input name="qty" type="number" required min="1" defaultValue={editingItem?.quantity || 1} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <input name="qty" type="number" required min="1" defaultValue={editingItem?.quantity || 1} className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Subtotal (Unitario)</label>
-                      <input name="subtotal" type="number" step="0.01" required min="0" defaultValue={editingItem?.subtotal_monthly || 0} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                      <input name="subtotal" type="number" step="0.01" required min="0" defaultValue={editingItem?.subtotal_monthly || 0} className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 mt-6">
@@ -1475,7 +1737,7 @@ export const RentalsView: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">URL del comprobante (Opcional)</label>
-                  <input type="url" id="receiptUrl" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://..." />
+                  <input type="url" id="receiptUrl" className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://..." />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Notas (Opcional)</label>
@@ -1514,7 +1776,7 @@ export const RentalsView: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Número de teléfono</label>
-                  <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Ej: 5512345678" />
+                  <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Ej: 5512345678" />
                 </div>
                 <div className="flex justify-end gap-2 mt-6">
                   <button onClick={() => setPhoneModalOpen(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">Cancelar</button>
@@ -1552,7 +1814,7 @@ export const RentalsView: React.FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">URL del contrato</label>
-                  <input type="url" value={newContractLink} onChange={e => setNewContractLink(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="https://..." />
+                  <input type="url" value={newContractLink} onChange={e => setNewContractLink(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-3 md:py-2 text-base md:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="https://..." />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Tipo de enlace</label>
@@ -1603,34 +1865,25 @@ export const RentalsView: React.FC = () => {
   );
 };
 
-// Componente KpiCard Refactorizado
+// Componente KpiCard Refactorizado AAA
 const KpiCard = ({ title, value, icon, color }: { title: string, value: string, icon: React.ReactNode, color: 'blue' | 'orange' | 'red' | 'amber' | 'gray' | 'green' }) => {
-  const colorMap = {
-    blue: 'bg-white border-gray-200',
-    orange: 'bg-white border-gray-200',
-    red: 'bg-white border-gray-200',
-    amber: 'bg-white border-gray-200',
-    gray: 'bg-white border-gray-200',
-    green: 'bg-white border-gray-200',
-  };
-
   const iconBgMap = {
-    blue: 'bg-blue-50 text-blue-600',
-    orange: 'bg-orange-50 text-orange-600',
-    red: 'bg-red-50 text-red-600',
-    amber: 'bg-amber-50 text-amber-600',
-    gray: 'bg-gray-100 text-gray-600',
-    green: 'bg-green-50 text-green-600',
+    blue: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    orange: 'bg-orange-50 text-orange-600 border-orange-100',
+    red: 'bg-rose-50 text-rose-600 border-rose-100',
+    amber: 'bg-amber-50 text-amber-600 border-amber-100',
+    gray: 'bg-zinc-50 text-zinc-500 border-zinc-100',
+    green: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   };
 
   return (
-    <div className={`p-2.5 rounded-lg border shadow-sm flex items-center gap-2.5 transition-colors ${colorMap[color]}`}>
-      <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${iconBgMap[color]}`}>
+    <div className="bg-white p-4 rounded-2xl border border-zinc-200 shadow-sm flex items-center gap-4 transition-all hover:shadow-md active:scale-[0.98]">
+      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border", iconBgMap[color])}>
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] text-gray-500 font-medium leading-tight truncate">{title}</p>
-        <p className="text-sm font-semibold text-gray-900 mt-0.5 truncate">{value}</p>
+        <p className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.2em] leading-tight truncate">{title}</p>
+        <p className="text-lg font-black text-zinc-900 mt-1 truncate tracking-tight">{value}</p>
       </div>
     </div>
   );

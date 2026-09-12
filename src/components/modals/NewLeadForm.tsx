@@ -87,16 +87,16 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-lg bg-white rounded-3xl lg:rounded-3xl shadow-2xl overflow-hidden h-full lg:h-auto lg:max-h-[90vh] flex flex-col"
             >
-              <div className="p-6 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20">
-                <h2 className="text-xl font-bold text-zinc-900">Nuevo Lead</h2>
-                <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
+              <div className="p-6 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20 safe-top">
+                <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tight">Nuevo Lead</h2>
+                <button onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
                   <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1 pb-32 lg:pb-6">
                 <AnimatePresence mode="wait">
                   {error && (
                     <motion.div
@@ -111,64 +111,64 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                   )}
                 </AnimatePresence>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1 flex items-center gap-1">
                     Nombre del Proyecto <span className="text-rose-500">*</span>
                   </label>
                   <input
                     required
                     type="text"
                     placeholder="Ej: Residencia Lomas"
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.project_name}
                     onChange={e => setFormData({ ...formData, project_name: e.target.value })}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1 flex items-center gap-1">
                       Nombre del Lead <span className="text-rose-500">*</span>
                     </label>
                     <input
                       required
                       type="text"
                       placeholder="Juan Pérez"
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.lead_name}
                       onChange={e => setFormData({ ...formData, lead_name: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1 flex items-center gap-1">
                       Email
                     </label>
                     <input
                       type="email"
                       placeholder="juan@ejemplo.com"
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1 flex items-center gap-1">
                       Teléfono <span className="text-rose-500">*</span>
                     </label>
                     <input
                       required
                       type="tel"
                       placeholder="+52 55..."
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1 flex items-center gap-1">
                       Presupuesto (MXN)
                     </label>
                     <div className="relative">
@@ -177,8 +177,9 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                         type="number"
                         min="0"
                         step="0.01"
+                        inputMode="decimal"
                         placeholder="0.00"
-                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        className="w-full pl-8 pr-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                         value={formData.budget}
                         onChange={e => setFormData({ ...formData, budget: e.target.value })}
                       />
@@ -186,10 +187,10 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Categoría</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1 flex items-center gap-1">Categoría</label>
                     <select
-                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
                       value={formData.category}
                       onChange={e => setFormData({ ...formData, category: e.target.value as any })}
                     >
@@ -201,43 +202,22 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     </select>
                   </div>
 
-                {/* Oculto temporalmente para simplificar el MVP */}
-                {/* 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Asset Inicial (Opcional)</label>
-                  <div className="relative group">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      onChange={e => setFormData({ ...formData, main_image_url: e.target.files?.[0] || null })}
-                    />
-                    <div className="border-2 border-dashed border-zinc-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 group-hover:border-indigo-500 transition-colors">
-                      <div className="w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400 group-hover:text-indigo-500 transition-colors">
-                        <Upload size={24} />
-                      </div>
-                      <p className="text-sm text-zinc-500">
-                        {formData.main_image_url ? formData.main_image_url.name : 'Subir render o foto'}
-                      </p>
-                    </div>
-                  </div>
+                <div className="fixed bottom-0 left-0 right-0 lg:static p-6 bg-white/80 backdrop-blur-md border-t lg:border-t-0 border-zinc-100 z-30 safe-bottom lg:pt-4">
+                  <button
+                    disabled={isSubmitting}
+                    type="submit"
+                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 active:scale-[0.98]"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Crear Lead'
+                    )}
+                  </button>
                 </div>
-                */}
-
-                <button
-                  disabled={isSubmitting}
-                  type="submit"
-                  className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all disabled:opacity-50"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={20} className="animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    'Crear Lead'
-                  )}
-                </button>
               </form>
             </motion.div>
         </div>

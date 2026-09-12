@@ -169,7 +169,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-300"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 md:py-2.5 pl-10 pr-4 text-slate-900 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-300"
               placeholder="Mínimo 8 caracteres"
             />
           </div>
@@ -184,7 +184,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-300"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 md:py-2.5 pl-10 pr-4 text-slate-900 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-300"
               placeholder="Repite tu contraseña"
             />
           </div>
