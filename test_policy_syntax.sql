@@ -1,0 +1,4 @@
+-- In PostgreSQL, CREATE POLICY IF NOT EXISTS is not standard syntax until very recent versions,
+-- and sometimes it throws errors depending on the Postgres version Supabase is running.
+-- The standard syntax is:
+-- CREATE POLICY "name" ON table FOR action TO role USING (expr) WITH CHECK (expr);

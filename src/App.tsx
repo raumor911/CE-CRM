@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Kanban, Table, Settings, Plus, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, Kanban, Table, Settings, Plus, CheckCircle2, Landmark } from 'lucide-react';
 import { KanbanBoard } from './components/KanbanBoard';
 import { DashboardView } from './components/DashboardView';
 import { DirectoryView } from './components/DirectoryView';
 import { RentalsView } from './components/RentalsView';
 import { InventoryView } from './components/InventoryView';
 import { SettingsView } from './components/SettingsView';
+import { FinanceView } from './finance/components/FinanceView';
 import { Sidebar } from './components/Sidebar';
 import { MobileHeader } from './components/layout/MobileHeader';
 import { BottomNavigation } from './components/layout/BottomNavigation';
@@ -28,7 +29,7 @@ import { BrandConfig } from './config/branding';
 import { RentasIcon, ContainerIcon } from './components/icons/BrandIcons';
 
 type AuthMode = 'login' | 'signup' | 'forgot-password' | 'reset-password';
-type ViewType = 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'settings';
+type ViewType = 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'finance' | 'settings';
 
 export default function App() {
   const { user, loading: authLoading, signOut, isPasswordRecovery, session, clearPasswordRecovery } = useAuth();
@@ -52,8 +53,8 @@ export default function App() {
     { id: 'rentals', label: 'Rentas', icon: RentasIcon },
     { id: 'inventory', label: 'Stock', icon: ContainerIcon },
   ] as const;
-
   const secondaryNavItems = [
+    { id: 'finance', label: 'Finanzas', icon: Landmark },
     { id: 'directory', label: 'Directorio', icon: Table },
     { id: 'settings', label: 'Ajustes', icon: Settings },
   ] as const;
@@ -233,7 +234,8 @@ export default function App() {
                  currentView === 'dashboard' ? '' :
                  currentView === 'directory' ? 'Directorio' :
                  currentView === 'rentals' ? 'Rentas' :
-                 currentView === 'inventory' ? 'Inventario' : 'Ajustes'}
+                 currentView === 'inventory' ? 'Inventario' :
+                 currentView === 'finance' ? 'Finanzas' : 'Ajustes'}
               </h1>
               {currentView === 'pipeline' && (
                 <button
@@ -293,6 +295,7 @@ export default function App() {
                 )}
                 {currentView === 'rentals' && <RentalsView />}
                 {currentView === 'inventory' && <InventoryView />}
+                {currentView === 'finance' && <FinanceView />}
                 {currentView === 'settings' && <SettingsView />}
               </motion.div>
             </AnimatePresence>
