@@ -93,6 +93,8 @@ export const FinanceExpensesTab: React.FC<{
   const [expenseNature, setExpenseNature] = useState<'ALL' | FinanceExpenseNature>('ALL');
   const [showMoreExpenseFilters, setShowMoreExpenseFilters] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [paymentExpenseId, setPaymentExpenseId] = useState<string | null>(null);
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<FinanceExpenseAttachment[]>([]);
   const [attachmentsLoading, setAttachmentsLoading] = useState(false);
@@ -118,6 +120,15 @@ export const FinanceExpensesTab: React.FC<{
     document_type: 'PAYMENT_RECEIPT' as FinanceExpenseAttachmentType,
   });
   const [expenseFile, setExpenseFile] = useState<File | null>(null);
+
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    paymentDate: getToday(),
+    paymentMethod: '',
+    reference: '',
+  });
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [paymentDocumentType, setPaymentDocumentType] = useState<FinanceExpenseAttachmentType>('PAYMENT_RECEIPT');
 
   useEffect(() => {
     if (!selectedExpenseId) {
@@ -214,6 +225,51 @@ export const FinanceExpensesTab: React.FC<{
       setFormErrors({});
       setSubmitError(null);
     setExpenseFile(null);
+  };
+
+  const handleRegisterPayment = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!paymentExpenseId) return;
+
+    setSubmitError(null);
+
+    const paidAmount = numberFromInput(paymentForm.amount);
+    if (!paidAmount || paidAmount <= 0) {
+      setSubmitError('El monto pagado debe ser mayor a cero.');
+      return;
+    }
+    if (!paymentForm.paymentDate) {
+      setSubmitError('La fecha de pago es requerida.');
+      return;
+    }
+
+    try {
+      await finance.updateExpense(paymentExpenseId, {
+        status: 'PAID',
+        paymentDate: paymentForm.paymentDate,
+        paidAmount: paidAmount,
+        paymentMethod: paymentForm.paymentMethod || null,
+        reference: paymentForm.reference || null,
+      });
+
+      if (paymentFile) {
+        try {
+          await finance.uploadExpenseAttachment({
+            expenseId: paymentExpenseId,
+            file: paymentFile,
+            documentType: paymentDocumentType,
+          });
+        } catch {
+          // ignore upload error
+        }
+      }
+
+      setIsPaymentOpen(false);
+      setPaymentExpenseId(null);
+      onSuccess('Pago registrado correctamente.');
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'No fue posible registrar el pago.');
+    }
   };
 
   const handleCreateExpense = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -766,6 +822,28 @@ export const FinanceExpensesTab: React.FC<{
                 {getLinkedEntityMeta(selectedExpense, finance) ? <p>{getLinkedEntityMeta(selectedExpense, finance)}</p> : null}
                 {selectedExpense.description ? <p>Notas: {selectedExpense.description}</p> : null}
               </div>
+              {selectedExpense.status === 'PENDING' ? (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentForm({
+                        amount: selectedExpense.amount.toString(),
+                        paymentDate: getToday(),
+                        paymentMethod: '',
+                        reference: '',
+                      });
+                      setIsPaymentOpen(true);
+                      setPaymentExpenseId(selectedExpense.id);
+                      setSelectedExpenseId(null);
+                    }}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white hover:bg-emerald-700"
+                  >
+                    <CircleDollarSign size={16} />
+                    Registrar pago
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="space-y-3">
@@ -847,6 +925,95 @@ export const FinanceExpensesTab: React.FC<{
             </div>
           </div>
         ) : null}
+      </SlideOverPanel>
+
+      <SlideOverPanel
+        open={isPaymentOpen}
+        onClose={() => {
+          setIsPaymentOpen(false);
+          setPaymentExpenseId(null);
+        }}
+        title="Registrar pago"
+        subtitle="Confirmar egreso pendiente."
+      >
+        <form className="space-y-4" onSubmit={handleRegisterPayment}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Monto pagado *">
+              <input
+                value={paymentForm.amount}
+                onChange={event => setPaymentForm(current => ({ ...current, amount: event.target.value }))}
+                inputMode="decimal"
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Fecha de pago *">
+              <input
+                type="date"
+                value={paymentForm.paymentDate}
+                onChange={event => setPaymentForm(current => ({ ...current, paymentDate: event.target.value }))}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Método de pago">
+              <select
+                value={paymentForm.paymentMethod}
+                onChange={event => setPaymentForm(current => ({ ...current, paymentMethod: event.target.value }))}
+                className={inputClass}
+              >
+                <option value="">Sin especificar</option>
+                {paymentMethodOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Referencia">
+              <input
+                value={paymentForm.reference}
+                onChange={event => setPaymentForm(current => ({ ...current, reference: event.target.value }))}
+                className={inputClass}
+              />
+            </Field>
+          </div>
+          <Field label="Comprobante (opcional)">
+            <input
+              type="file"
+              onChange={event => setPaymentFile(event.target.files?.[0] || null)}
+              className="block w-full text-sm text-slate-500 file:mr-4 file:rounded-2xl file:border-0 file:bg-slate-900 file:px-4 file:py-3 file:text-sm file:font-bold file:text-white"
+            />
+          </Field>
+          {paymentFile ? (
+            <Field label="Tipo de documento">
+              <select
+                value={paymentDocumentType}
+                onChange={event => setPaymentDocumentType(event.target.value as FinanceExpenseAttachmentType)}
+                className={inputClass}
+              >
+                {attachmentTypes.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
+          {submitError ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {submitError || 'No fue posible registrar el pago.'}
+            </div>
+          ) : null}
+          <button
+            type="submit"
+            disabled={financeModule.saving}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white hover:bg-emerald-700 disabled:bg-slate-300"
+          >
+            {financeModule.saving ? <Loader2 size={16} className="animate-spin" /> : <CircleDollarSign size={16} />}
+            {financeModule.saving ? 'Registrando...' : 'Confirmar pago'}
+          </button>
+        </form>
       </SlideOverPanel>
 
     </div>

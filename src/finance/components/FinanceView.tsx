@@ -3,6 +3,7 @@ import {
   BriefcaseBusiness,
   Factory,
   Loader2,
+  Lock,
   ReceiptText,
   RefreshCcw,
   WalletCards,
@@ -58,6 +59,18 @@ export const FinanceView: React.FC = () => {
         onRefresh={() => finance.refresh()}
         feedback={feedback}
       >
+        <button
+          type="button"
+          onClick={() => {
+            sessionStorage.removeItem('catalyst_finance_unlocked');
+            window.dispatchEvent(new Event('finance:lock'));
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+          title="Bloquear Finanzas"
+        >
+          <Lock size={16} />
+          <span className="hidden sm:inline">Bloquear</span>
+        </button>
         <FinancePeriodSelector value={finance.period} onChange={finance.setPeriod} />
       </FinanceHeader>
 

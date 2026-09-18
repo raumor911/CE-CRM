@@ -42,7 +42,7 @@ type AuditMeta = {
 type ContainerPurchaseInput = AuditMeta & {
   product_type: '20 DC' | '40 DC' | '40 HC' | 'Oficina';
   physical_number?: string;
-  condition: 'Nuevo' | 'Excelente' | 'Bueno' | 'Regular' | 'Requiere reparación';
+  condition: 'Nuevo' | 'Usado';
   initial_location?: string;
   acquisition_amount: number;
   acquisition_date: string;
@@ -498,6 +498,29 @@ export const createFinanceService = (deps: FinanceServiceDeps = {}) => {
       updated_by: meta.userId || undefined,
       updated_at: new Date().toISOString(),
     });
+    return recurring;
+  };
+
+  const cancelRecurringExpense = async (id: string, meta: AuditMeta = {}) => {
+    // 1. Update the configuration status to CANCELLED
+    const recurring = await repository.updateRecurringExpense(id, {
+      status: 'CANCELLED',
+      updated_by: meta.userId || undefined,
+      updated_at: new Date().toISOString(),
+    });
+
+    // 2. Cancel all pending (EXPECTED) occurrences for this expense
+    await repository.cancelPendingRecurringOccurrences(id);
+
+    // 3. Log event
+    await createEvent(
+      'FIN_RECURRING_CANCELLED',
+      'FIN_RECURRING_EXPENSE',
+      id,
+      { concept: recurring.concept },
+      meta
+    );
+
     return recurring;
   };
 
@@ -1461,6 +1484,7 @@ export const createFinanceService = (deps: FinanceServiceDeps = {}) => {
     removeExpenseAllocation,
     createRecurringExpense,
     updateRecurringExpense,
+    cancelRecurringExpense,
     generateRecurringOccurrences,
     registerRecurringPayment,
     createPayrollProfile,

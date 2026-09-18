@@ -46,7 +46,7 @@ export interface LeadDocument {
 }
 
 export type ProductType = 'Oficina' | '20 DC' | '40 DC' | '40 HC';
-export type ProductCondition = 'Nuevo' | 'Excelente' | 'Bueno' | 'Regular' | 'Requiere reparación';
+export type ProductCondition = 'Nuevo' | 'Usado';
 export type ProductLocation = 'Patio principal' | 'Taller' | 'Cliente' | 'En traslado' | 'Proveedor' | 'Otra ubicación';
 export type ProductOperationalStatus = 'Disponible' | 'Reservada' | 'Rentada' | 'Vendido' | 'Mantenimiento' | 'Fuera de servicio' | 'En retorno' | 'Inspección';
 

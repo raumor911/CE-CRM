@@ -162,7 +162,7 @@ export const ProductRegistrationForm: React.FC<ProductRegistrationFormProps> = (
   };
 
   const productTypes: ProductType[] = ['Oficina', '20 DC', '40 DC', '40 HC'];
-  const conditions: ProductCondition[] = ['Nuevo', 'Excelente', 'Bueno', 'Regular', 'Requiere reparación'];
+  const conditions: ProductCondition[] = ['Nuevo', 'Usado'];
   
   const getLocations = (): ProductLocation[] => {
     if (formData.product_type === 'Oficina') {

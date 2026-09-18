@@ -269,6 +269,16 @@ export const financeRepository = {
     return data as FinanceRecurringOccurrence;
   },
 
+  async cancelPendingRecurringOccurrences(recurringExpenseId: string): Promise<void> {
+    const { error } = await supabase
+      .from('fin_recurring_occurrences')
+      .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+      .eq('recurring_expense_id', recurringExpenseId)
+      .eq('status', 'EXPECTED');
+      
+    if (error) throw error;
+  },
+
   async listPayrollProfiles(): Promise<FinancePayrollProfile[]> {
     const { data, error } = await supabase
       .from('fin_payroll_profiles')

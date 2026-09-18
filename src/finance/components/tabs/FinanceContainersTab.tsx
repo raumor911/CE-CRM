@@ -37,7 +37,7 @@ export const FinanceContainersTab: React.FC<{
   const [purchaseForm, setPurchaseForm] = useState({
     product_type: '20 DC' as '20 DC' | '40 DC' | '40 HC' | 'Oficina',
     physical_number: '',
-    condition: 'Bueno' as 'Nuevo' | 'Excelente' | 'Bueno' | 'Regular' | 'Requiere reparación',
+    condition: 'Usado' as 'Nuevo' | 'Usado',
     initial_location: 'Patio principal',
     acquisition_amount: '',
     acquisition_date: getToday(),
@@ -222,10 +222,7 @@ export const FinanceContainersTab: React.FC<{
             <Field label="Condicion *">
               <select value={purchaseForm.condition} onChange={event => setPurchaseForm(current => ({ ...current, condition: event.target.value as typeof current.condition }))} className={inputClass}>
                 <option value="Nuevo">Nuevo</option>
-                <option value="Excelente">Excelente</option>
-                <option value="Bueno">Bueno</option>
-                <option value="Regular">Regular</option>
-                <option value="Requiere reparación">Requiere reparacion</option>
+                <option value="Usado">Usado</option>
               </select>
             </Field>
           </div>

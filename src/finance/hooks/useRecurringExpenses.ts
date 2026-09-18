@@ -50,6 +50,7 @@ export const useRecurringExpenses = (finance: UseFinanceModuleResult) => {
       paidAmount,
       createRecurringExpense: finance.createRecurringExpense,
       updateRecurringExpense: finance.updateRecurringExpense,
+      cancelRecurringExpense: finance.cancelRecurringExpense,
       generateRecurringOccurrences: finance.generateRecurringOccurrences,
       registerRecurringPayment: finance.registerRecurringPayment,
       categories: finance.categories,
@@ -59,6 +60,7 @@ export const useRecurringExpenses = (finance: UseFinanceModuleResult) => {
     }),
     [
       finance.allRecurringOccurrences,
+      finance.cancelRecurringExpense,
       finance.categories,
       finance.createRecurringExpense,
       finance.generateRecurringOccurrences,

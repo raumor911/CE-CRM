@@ -215,12 +215,16 @@ export const useFinanceModule = (userId?: string | null) => {
       refresh,
       createExpense: (draft: FinanceExpenseDraft) =>
         runMutation(() => financeService.createExpense(draft, { userId: userId || null })),
+      updateExpense: (expenseId: string, updates: Partial<FinanceExpenseDraft>) =>
+        runMutation(() => financeService.updateExpense(expenseId, updates, { userId: userId || null })),
       cancelExpense: (expenseId: string) =>
         runMutation(() => financeService.cancelExpense(expenseId, { userId: userId || null })),
       createRecurringExpense: (draft: FinanceRecurringExpenseDraft) =>
         runMutation(() => financeService.createRecurringExpense(draft, { userId: userId || null })),
       updateRecurringExpense: (id: string, updates: Partial<FinanceRecurringExpenseDraft>) =>
         runMutation(() => financeService.updateRecurringExpense(id, updates, { userId: userId || null })),
+      cancelRecurringExpense: (id: string) =>
+        runMutation(() => financeService.cancelRecurringExpense(id, { userId: userId || null })),
       generateRecurringOccurrences: () =>
         runMutation(() => financeService.generateRecurringOccurrences(periodContext.endDate, { userId: userId || null })),
       registerRecurringPayment: (
@@ -265,7 +269,7 @@ export const useFinanceModule = (userId?: string | null) => {
       registerContainerPurchase: (input: {
         product_type: '20 DC' | '40 DC' | '40 HC' | 'Oficina';
         physical_number?: string;
-        condition: 'Nuevo' | 'Excelente' | 'Bueno' | 'Regular' | 'Requiere reparación';
+        condition: 'Nuevo' | 'Usado';
         initial_location?: string;
         acquisition_amount: number;
         acquisition_date: string;

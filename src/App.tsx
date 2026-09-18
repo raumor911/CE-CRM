@@ -7,6 +7,7 @@ import { RentalsView } from './components/RentalsView';
 import { InventoryView } from './components/InventoryView';
 import { SettingsView } from './components/SettingsView';
 import { FinanceView } from './finance/components/FinanceView';
+import { FinanceAccessGate } from './finance/access/FinanceAccessGate';
 import { Sidebar } from './components/Sidebar';
 import { MobileHeader } from './components/layout/MobileHeader';
 import { BottomNavigation } from './components/layout/BottomNavigation';
@@ -295,7 +296,11 @@ export default function App() {
                 )}
                 {currentView === 'rentals' && <RentalsView />}
                 {currentView === 'inventory' && <InventoryView />}
-                {currentView === 'finance' && <FinanceView />}
+                {currentView === 'finance' && (
+                  <FinanceAccessGate>
+                    <FinanceView />
+                  </FinanceAccessGate>
+                )}
                 {currentView === 'settings' && <SettingsView />}
               </motion.div>
             </AnimatePresence>

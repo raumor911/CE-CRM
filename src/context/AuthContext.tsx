@@ -46,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const clearPasswordRecovery = () => setIsPasswordRecovery(false);
 
   const signOut = async () => {
+    sessionStorage.removeItem('catalyst_finance_unlocked');
     await supabase.auth.signOut();
     clearPasswordRecovery();
   };

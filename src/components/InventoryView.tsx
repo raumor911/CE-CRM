@@ -116,7 +116,7 @@ const InventoryStats = ({ products }: { products: Product[] }) => {
   }, [products]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       {/* Indicadores Principales */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -218,64 +218,6 @@ const InventoryStats = ({ products }: { products: Product[] }) => {
             className="h-full bg-emerald-500 rounded-full"
           />
         </div>
-      </motion.div>
-
-      {/* Alternativa Comercial */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 100, damping: 40, delay: 0.2 }}
-        className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm space-y-4"
-      >
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Por alternativa comercial</span>
-        <div className="space-y-3">
-          {[
-            { label: 'Venta', count: stats.alternatives.Venta },
-            { label: 'Renta', count: stats.alternatives.Renta },
-            { label: 'Modificación', count: stats.alternatives.Modificacion }
-          ].map(item => (
-            <div key={item.label} className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700">{item.label}</span>
-              <span className="text-xs font-black text-slate-900 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100">{item.count}</span>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Métricas de Acción */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 100, damping: 40, delay: 0.3 }}
-        className="bg-slate-900 p-6 rounded-2xl shadow-lg shadow-slate-900/10 space-y-4"
-      >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-rose-400">
-              <Clock size={14} />
-              <span className="text-[10px] font-black uppercase tracking-tight">Sin movimiento +90 días</span>
-            </div>
-            <span className="text-xs font-black text-white">{stats.staleCount}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-amber-400">
-              <AlertTriangle size={14} />
-              <span className="text-[10px] font-black uppercase tracking-tight">Reservas por vencer</span>
-            </div>
-            <span className="text-xs font-black text-white">2</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-indigo-400">
-              <BarChart2 size={14} />
-              <span className="text-[10px] font-black uppercase tracking-tight">Mantenimiento activo</span>
-            </div>
-            <span className="text-xs font-black text-white">{stats.activeMaintenance}</span>
-          </div>
-        </div>
-        <button className="w-full py-2 bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
-          Ver acciones pendientes
-          <ArrowRight size={12} />
-        </button>
       </motion.div>
     </div>
   );
@@ -469,10 +411,7 @@ export const InventoryView: React.FC = () => {
                             options={[
                               ['all', 'Todas'],
                               ['Nuevo', 'Nuevo'],
-                              ['Excelente', 'Excelente'],
-                              ['Bueno', 'Bueno'],
-                              ['Regular', 'Regular'],
-                              ['Requiere reparación', 'Requiere reparación']
+                              ['Usado', 'Usado']
                             ]}
                           />
 

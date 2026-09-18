@@ -32,6 +32,7 @@ export const FinanceRecurringTab: React.FC<{
   const [panel, setPanel] = useState<RecurringPanelState>(null);
   const [recurringFile, setRecurringFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<FinanceExpenseAttachmentType>('PAYMENT_RECEIPT');
+  const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
 
   const [recurringForm, setRecurringForm] = useState({
     concept: '',
@@ -145,12 +146,19 @@ export const FinanceRecurringTab: React.FC<{
     <div className="space-y-6">
       <FinanceCard title="Recurrentes" subtitle={`Operacion por vencimientos para ${periodLabel}.`}>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <FinancialMetricCard label="Pendientes" value={formatCurrency(finance.pendingAmount)} tone="danger" />
-            <FinancialMetricCard label="Pagados" value={formatCurrency(finance.paidAmount)} tone="positive" />
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <FinancialMetricCard
+              label="Total mensual"
+              value={formatCurrency(
+                finance.recurringExpenses
+                  .filter(item => item.status === 'ACTIVE' || item.status === 'PAUSED')
+                  .reduce((sum, item) => sum + Number(item.expected_amount), 0)
+              )}
+              tone="neutral"
+            />
             <FinancialMetricCard
               label="Configurados"
-              value={`${finance.recurringExpenses.filter(item => item.status === 'ACTIVE').length}`}
+              value={`${finance.recurringExpenses.filter(item => item.status === 'ACTIVE' || item.status === 'PAUSED').length}`}
             />
           </div>
           <div className="flex flex-col gap-3">
@@ -176,13 +184,15 @@ export const FinanceRecurringTab: React.FC<{
 
       <FinanceCard title="Obligaciones del periodo" subtitle="Configuras una vez y operas pagos.">
         <div className="space-y-3">
-          {finance.recurringExpenses.length === 0 ? (
-            <EmptyState message="Aun no hay recurrentes configurados." />
+          {finance.recurringExpenses.filter(item => item.status !== 'CANCELLED').length === 0 ? (
+            <EmptyState message="Aun no hay recurrentes configurados o vigentes." />
           ) : (
-            finance.recurringExpenses.map(item => {
-              const current =
-                finance.recurringOccurrences.find(occurrence => occurrence.recurring_expense_id === item.id && occurrence.status === 'EXPECTED') ||
-                finance.recurringOccurrences.find(occurrence => occurrence.recurring_expense_id === item.id);
+            finance.recurringExpenses
+              .filter(item => item.status !== 'CANCELLED')
+              .map(item => {
+                const current =
+                  finance.recurringOccurrences.find(occurrence => occurrence.recurring_expense_id === item.id && occurrence.status === 'EXPECTED') ||
+                  finance.recurringOccurrences.find(occurrence => occurrence.recurring_expense_id === item.id && occurrence.status !== 'CANCELLED');
 
               return (
                 <button
@@ -375,27 +385,77 @@ export const FinanceRecurringTab: React.FC<{
                   ))
               )}
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button type="button" onClick={() => openEdit(selectedRecurring.id)} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">
-                Editar configuracion
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  finance
-                    .updateRecurringExpense(selectedRecurring.id, {
-                      status: selectedRecurring.status === 'ACTIVE' ? 'PAUSED' : 'CANCELLED',
-                    })
-                    .then(() => {
-                      setPanel(null);
-                      onSuccess(selectedRecurring.status === 'ACTIVE' ? 'Recurrente pausado.' : 'Recurrente finalizado.');
-                    })
-                    .catch(() => undefined)
-                }
-                className="rounded-2xl border border-amber-200 px-4 py-3 text-sm font-bold text-amber-700"
-              >
-                {selectedRecurring.status === 'ACTIVE' ? 'Pausar recurrente' : 'Finalizar recurrente'}
-              </button>
+            <div className="flex flex-col gap-3">
+              {cancelConfirmId === selectedRecurring.id ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 space-y-4">
+                  <div>
+                    <p className="text-sm font-black text-rose-900 uppercase tracking-wider">Cancelar recurrente</p>
+                    <p className="text-base font-bold text-slate-900 mt-1">{selectedRecurring.concept}</p>
+                    <p className="text-sm text-rose-800 mt-2">
+                      Este recurrente dejará de generar obligaciones a partir de este momento y no aparecerá en periodos posteriores.
+                    </p>
+                    <p className="text-sm font-semibold text-rose-900 mt-2">
+                      Esta acción no elimina pagos históricos.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setCancelConfirmId(null)}
+                      className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Volver
+                    </button>
+                    <button
+                      type="button"
+                      disabled={financeModule.saving}
+                      onClick={() =>
+                        finance
+                          .cancelRecurringExpense(selectedRecurring.id)
+                          .then(() => {
+                            setCancelConfirmId(null);
+                            setPanel(null);
+                            onSuccess('Recurrente cancelado.');
+                          })
+                          .catch(() => undefined)
+                      }
+                      className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50 flex justify-center items-center"
+                    >
+                      {financeModule.saving ? <Loader2 size={16} className="animate-spin" /> : 'Cancelar recurrente'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button type="button" onClick={() => openEdit(selectedRecurring.id)} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">
+                    Editar configuracion
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      finance
+                        .updateRecurringExpense(selectedRecurring.id, {
+                          status: selectedRecurring.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE',
+                        })
+                        .then(() => {
+                          setPanel(null);
+                          onSuccess(selectedRecurring.status === 'ACTIVE' ? 'Recurrente pausado.' : 'Recurrente reactivado.');
+                        })
+                        .catch(() => undefined)
+                    }
+                    className="rounded-2xl border border-amber-200 px-4 py-3 text-sm font-bold text-amber-700 hover:bg-amber-50"
+                  >
+                    {selectedRecurring.status === 'ACTIVE' ? 'Pausar recurrente' : 'Reactivar recurrente'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCancelConfirmId(selectedRecurring.id)}
+                    className="rounded-2xl border border-rose-200 px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50"
+                  >
+                    Cancelar recurrente
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ) : null}

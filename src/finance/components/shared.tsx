@@ -82,6 +82,18 @@ export const FinancialMetricCard: React.FC<{
   </div>
 );
 
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'ACTIVO',
+  PAUSED: 'PAUSADO',
+  CANCELLED: 'CANCELADO',
+  PAID: 'PAGADO',
+  PENDING: 'PENDIENTE',
+  EXPECTED: 'ESPERADO',
+  CLOSED: 'CERRADO',
+  OPEN: 'ABIERTO',
+  PARTIAL: 'PARCIAL',
+};
+
 export const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
   <span
     className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
@@ -92,7 +104,7 @@ export const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
           : 'bg-slate-100 text-slate-600'
     }`}
   >
-    {status}
+    {STATUS_LABELS[status] || status}
   </span>
 );
 

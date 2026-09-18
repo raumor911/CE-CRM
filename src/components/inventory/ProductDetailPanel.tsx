@@ -146,8 +146,11 @@ export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({
 
     setIsSaving(true);
     try {
+      // Remove virtual fields that don't belong to the inventory_products table
+      const { active_assignment, ...validFormData } = formData as any;
+
       const updates = {
-        ...formData,
+        ...validFormData,
         updated_at: new Date().toISOString()
       };
 
@@ -186,8 +189,8 @@ export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({
     </div>
   );
 
-  const productTypes: ProductType[] = ['Oficina', '20 DC', '40 DC', '40 HC'];
-  const conditions: ProductCondition[] = ['Nuevo', 'Excelente', 'Bueno', 'Regular', 'Requiere reparación'];
+  const productTypes: ProductType[] = ['20 DC', '40 DC', '40 HC', 'Oficina'];
+  const conditions: ProductCondition[] = ['Nuevo', 'Usado'];
   const locations: ProductLocation[] = ['Patio principal', 'Taller', 'Cliente', 'En traslado', 'Proveedor', 'Otra ubicación'];
   const operationalStatuses: ProductOperationalStatus[] = ['Disponible', 'Reservada', 'Rentada', 'Vendido', 'Mantenimiento', 'Fuera de servicio', 'En retorno', 'Inspección'];
 
