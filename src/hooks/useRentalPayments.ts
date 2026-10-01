@@ -6,9 +6,10 @@ import { format, startOfMonth, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useCurrentBillingPeriod } from './useCurrentBillingPeriod';
 
-// Helper to safely parse local date string YYYY-MM-DD
+// Helper to safely parse local date string YYYY-MM-DD or ISO string
 const parseLocalDate = (dateStr: string) => {
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const datePart = dateStr.split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
 
