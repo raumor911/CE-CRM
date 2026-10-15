@@ -143,7 +143,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                       required
                       type="text"
                       placeholder="Juan Pérez"
-                    disabled={isSubmitting}
+                      disabled={isSubmitting}
                       className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.lead_name}
                       onChange={e => setFormData({ ...formData, lead_name: e.target.value })}
@@ -156,7 +156,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     <input
                       type="email"
                       placeholder="juan@ejemplo.com"
-                    disabled={isSubmitting}
+                      disabled={isSubmitting}
                       className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -173,7 +173,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                       required
                       type="tel"
                       placeholder="+52 55..."
-                    disabled={isSubmitting}
+                      disabled={isSubmitting}
                       className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
@@ -191,7 +191,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                         step="0.01"
                         inputMode="decimal"
                         placeholder="0.00"
-                    disabled={isSubmitting}
+                        disabled={isSubmitting}
                         className="w-full pl-8 pr-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                         value={formData.budget}
                         onChange={e => setFormData({ ...formData, budget: e.target.value })}
