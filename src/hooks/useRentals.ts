@@ -274,6 +274,65 @@ export const useRentals = () => {
     }
   };
 
+  // H04: guardar contrato y equipos en una sola transaccion en PostgreSQL.
+  // Los cobros mensuales existentes son snapshots y no se reescriben.
+  const updateRentalContractWithItems = async (
+    rentalId: string,
+    rentalData: Partial<Rental>,
+    itemsData: Partial<RentalItem>[]
+  ) => {
+    const currentRental = rentals.find(r => r.id === rentalId);
+    if (!currentRental?.updated_at) {
+      throw new Error('No se encontro la version actual de la renta. Vuelve a abrir el contrato.');
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: saveError } = await supabase.rpc('update_rental_contract_with_items', {
+        p_rental_id: rentalId,
+        p_expected_updated_at: currentRental.updated_at,
+        p_rental_data: {
+          customer_name: cleanCustomerName(rentalData.customer_name),
+          customer_phone: normalizeCustomerPhone(rentalData.customer_phone) || null,
+          project_name: rentalData.project_name || null,
+          location: rentalData.location || null,
+          start_date: rentalData.start_date,
+          contractual_end_date: rentalData.contractual_end_date
+        },
+        p_items: itemsData.map(item => ({
+          id: item.id || null,
+          equipment_description: item.equipment_description,
+          quantity: Number(item.quantity),
+          subtotal_monthly: Number(item.subtotal_monthly),
+          tax_monthly: Number(item.tax_monthly),
+          monthly_total: Number(item.monthly_total)
+        }))
+      });
+
+      if (saveError) throw saveError;
+      const response = data as { rental?: Rental; items?: RentalItem[] } | null;
+      if (response?.rental?.id !== rentalId || !Array.isArray(response.items)) {
+        throw new Error('No se pudo verificar el resultado del guardado. Vuelve a consultar el contrato antes de reintentar.');
+      }
+
+      setRentals(prev => prev.map(r =>
+        r.id === rentalId
+          ? { ...response.rental!, items: response.items! }
+          : r
+      ));
+
+      return { ...response.rental, items: response.items } as RentalWithItems;
+    } catch (err: any) {
+      const message = err?.message || 'No fue posible guardar el contrato y los equipos.';
+      setError(message);
+      console.error('Error saving rental contract and items:', err);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- NUEVAS OPERACIONES ---
 
   // 1. Actividades de renta
@@ -604,6 +663,7 @@ export const useRentals = () => {
     fetchRentals,
     createRental,
     updateRental,
+    updateRentalContractWithItems,
     getRentalActivities,
     addRentalActivity,
     recalculateTotals,
