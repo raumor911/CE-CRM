@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Upload, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../lib/supabase';
@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 interface NewLeadFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void>;
 }
 
 export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSubmit }) => {
@@ -20,6 +20,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
     main_image_url: null as File | null
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionInFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const checkEmailDuplicity = async (email: string) => {
@@ -31,44 +32,50 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
     
     if (error) {
       console.error('Error checking duplicity:', error);
-      return false;
+      throw new Error('No fue posible validar el correo electrónico. Intenta nuevamente.');
     }
     return !!data;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submissionInFlight.current) return;
+
     setError(null);
     if (!formData.project_name || !formData.lead_name || !formData.phone) return;
 
+    submissionInFlight.current = true;
     setIsSubmitting(true);
+    let saved = false;
 
     try {
       if (formData.email) {
         const isDuplicate = await checkEmailDuplicity(formData.email);
         if (isDuplicate) {
           setError('Ya existe un lead registrado con este correo electrónico.');
-          setIsSubmitting(false);
           return;
         }
       }
 
-      // Simulación de guardado
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      onSubmit({
+      await onSubmit({
         ...formData,
         budget: formData.budget || 0,
-        main_image_url: '' // Forzamos cadena vacía desde el origen
+        main_image_url: ''
       });
-      
-      onClose();
-      setFormData({ project_name: '', lead_name: '', email: '', phone: '', budget: '', category: 'Proyecto', main_image_url: null });
-    } catch (err: any) {
-      setError(err.message);
+      saved = true;
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'No fue posible crear el lead. Intenta nuevamente.');
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
+
+    // Solo cerrar después de que Supabase confirme el registro.
+    if (saved) onClose();
+  };
+
+  const handleClose = () => {
+    if (!submissionInFlight.current) onClose();
   };
 
   return (
@@ -79,7 +86,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
           
@@ -91,7 +98,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
             >
               <div className="p-6 border-b border-zinc-100 flex items-center justify-between sticky top-0 bg-white z-20 safe-top">
                 <h2 className="text-xl font-black text-zinc-900 uppercase tracking-tight">Nuevo Lead</h2>
-                <button onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
+                <button onClick={handleClose} disabled={isSubmitting} className="w-11 h-11 flex items-center justify-center hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
                   <X size={20} />
                 </button>
               </div>
@@ -104,6 +111,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-start gap-3"
+                      role="alert"
                     >
                       <AlertCircle className="text-rose-500 shrink-0 mt-0.5" size={16} />
                       <p className="text-xs text-rose-700 leading-tight font-medium">{error}</p>
@@ -119,6 +127,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     required
                     type="text"
                     placeholder="Ej: Residencia Lomas"
+                    disabled={isSubmitting}
                     className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     value={formData.project_name}
                     onChange={e => setFormData({ ...formData, project_name: e.target.value })}
@@ -134,6 +143,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                       required
                       type="text"
                       placeholder="Juan Pérez"
+                    disabled={isSubmitting}
                       className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.lead_name}
                       onChange={e => setFormData({ ...formData, lead_name: e.target.value })}
@@ -146,6 +156,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     <input
                       type="email"
                       placeholder="juan@ejemplo.com"
+                    disabled={isSubmitting}
                       className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -162,6 +173,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                       required
                       type="tel"
                       placeholder="+52 55..."
+                    disabled={isSubmitting}
                       className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
@@ -179,6 +191,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                         step="0.01"
                         inputMode="decimal"
                         placeholder="0.00"
+                    disabled={isSubmitting}
                         className="w-full pl-8 pr-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                         value={formData.budget}
                         onChange={e => setFormData({ ...formData, budget: e.target.value })}
@@ -192,6 +205,7 @@ export const NewLeadForm: React.FC<NewLeadFormProps> = ({ isOpen, onClose, onSub
                     <select
                       className="w-full px-4 py-3.5 md:py-3 rounded-2xl border border-zinc-200 bg-zinc-50 text-base md:text-sm font-bold text-zinc-900 focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
                       value={formData.category}
+                      disabled={isSubmitting}
                       onChange={e => setFormData({ ...formData, category: e.target.value as any })}
                     >
                       <option value="Compra Contenedor">Compra Contenedor</option>
