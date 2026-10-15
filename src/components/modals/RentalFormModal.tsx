@@ -389,9 +389,10 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
 
                 {initialData && (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-3">
-                    Los pagos mensuales que ya fueron generados conservan sus importes.
-                    Si cambias una tarifa, revisa por separado los pagos pendientes existentes.
-                    El nuevo importe se usara para los periodos que se generen despues.
+                    Los pagos mensuales ya generados conservan sus importes. Si cambias una tarifa,
+                    revisa por separado los cobros pendientes. El nuevo importe se usará para
+                    los periodos que se generen después. Esta edición no libera ni reasigna
+                    los contenedores físicos del módulo Stock.
                   </p>
                 )}
 
