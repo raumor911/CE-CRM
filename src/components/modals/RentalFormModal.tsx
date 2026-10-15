@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Rental, RentalItem } from '../../types';
@@ -40,6 +40,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionInFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedCustomerKey, setSelectedCustomerKey] = useState<string | null>(null);
@@ -121,6 +122,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submissionInFlight.current) return;
     setError(null);
 
     if (!formData.customer_name?.trim()) {
@@ -169,6 +171,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
       return;
     }
 
+    submissionInFlight.current = true;
     setIsSubmitting(true);
     try {
       const normalizedName = normalizeCustomerName(formData.customer_name);
@@ -196,10 +199,15 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
       setSelectedCustomerKey(null);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'No fue posible crear la renta. Verifica los datos e intenta nuevamente.');
+      setError(err.message || 'No fue posible guardar la renta. Verifica los datos e intenta nuevamente.');
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
+  };
+
+  const handleClose = () => {
+    if (!submissionInFlight.current) onClose();
   };
 
   return (
@@ -210,7 +218,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
           
@@ -228,14 +236,15 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                 </h2>
                 <p className="text-xs text-zinc-500 font-medium">Registra los datos del contrato y equipos.</p>
               </div>
-            <button onClick={onClose} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
+            <button onClick={handleClose} disabled={isSubmitting} className="p-2 hover:bg-zinc-100 rounded-full transition-colors text-zinc-500">
               <X size={20} />
             </button>
           </div>
 
           {/* Form Content */}
           <div className="overflow-y-auto flex-1 p-6">
-            <form id="rental-form" onSubmit={handleSubmit} className="space-y-8">
+            <form id="rental-form" onSubmit={handleSubmit}>
+              <fieldset disabled={isSubmitting} className="space-y-8">
               <AnimatePresence mode="wait">
                 {error && (
                   <motion.div
@@ -243,6 +252,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                     className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-start gap-3 mb-4"
+                    role="alert"
                   >
                     <AlertCircle className="text-rose-500 shrink-0 mt-0.5" size={16} />
                     <p className="text-xs text-rose-700 leading-tight font-medium">{error}</p>
@@ -377,6 +387,15 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                   </button>
                 </div>
 
+                {initialData && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-3">
+                    Los pagos mensuales ya generados conservan sus importes. Si cambias una tarifa,
+                    revisa por separado los cobros pendientes. El nuevo importe se usará para
+                    los periodos que se generen después. Esta edición no libera ni reasigna
+                    los contenedores físicos del módulo Stock.
+                  </p>
+                )}
+
                 <div className="space-y-3">
                   {items.map((item, index) => (
                     <div key={index} className="p-4 rounded-xl border border-zinc-200 bg-zinc-50/50 space-y-4">
@@ -445,6 +464,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                   ))}
                 </div>
               </div>
+              </fieldset>
             </form>
           </div>
 
