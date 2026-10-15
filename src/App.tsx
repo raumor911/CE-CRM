@@ -78,47 +78,41 @@ export default function App() {
     showToast('Contraseña actualizada correctamente', 'success');
   };
 
-  const handleCreateLead = async (data: any) => {
+  const handleCreateLead = async (data: any): Promise<void> => {
     try {
-      // 1. CONSTRUCCIÓN LIMPIA DEL OBJETO
-      // Convertimos explícitamente el presupuesto a número y eliminamos la imagen
       const newLeadData: Omit<Lead, 'id'> = {
         project_name: data.project_name,
         lead_name: data.lead_name,
-        // REGLA DE ORO: Si el email viene vacío, enviamos null para PostgreSQL
         email: data.email?.trim() === "" ? null : data.email,
         phone: data.phone,
-        budget: Number(data.budget) || 0, // Aseguramos que sea número
+        budget: Number(data.budget) || 0,
         category: data.category,
         stage: 'Ingreso',
         last_activity: new Date().toISOString(),
         sentiment_label: 'Dudoso',
-        main_image_url: '', // Enviamos cadena vacía para evitar errores de tipo
+        main_image_url: '',
         checklist_briefing: { m2: false, deadlines: false }
       };
 
-      // 2. INSERCIÓN EN SUPABASE
+      // El alta solo se confirma cuando Supabase devuelve el registro creado.
       const createdLead = await supabaseCreateLead(newLeadData);
-
-      if (createdLead) {
-        // 3. ANÁLISIS DE SENTIMIENTO (Opcional)
-        try {
-          const sentiment = await analyzeSentiment("Nuevo lead capturado");
-          await supabaseUpdateLead(createdLead.id, { sentiment_label: sentiment });
-        } catch (e) {
-          console.warn("Fallo análisis de IA, pero el lead se creó.");
-        }
-
-        showToast("Lead creado exitosamente", "success");
-        setIsModalOpen(false); // Cerrar modal
+      if (!createdLead?.id) {
+        throw new Error('Supabase no confirmó el registro del lead.');
       }
+
+      showToast('Lead creado exitosamente', 'success');
+
+      // Análisis opcional: no debe retrasar ni invalidar un alta ya confirmada.
+      void analyzeSentiment('Nuevo lead capturado')
+        .then(sentiment => supabaseUpdateLead(createdLead.id, { sentiment_label: sentiment }))
+        .catch(() => console.warn('Falló el análisis de sentimiento; el lead sí se creó.'));
     } catch (error: any) {
-      console.error("Error crítico al crear lead:", error);
-      // Si el error es 23505, es por correo duplicado
-      const message = error.code === '23505'
-        ? "Este correo electrónico ya está registrado"
-        : "Error de conexión con la base de datos";
-      showToast(message, "error");
+      console.error('Error crítico al crear lead:', error);
+      // El formulario debe recibir el error, conservar la captura y permitir reintentar.
+      const message = error?.code === '23505'
+        ? 'Este correo electrónico ya está registrado'
+        : 'No fue posible guardar el lead. Revisa tu conexión e intenta nuevamente.';
+      throw new Error(message);
     }
   };
 
