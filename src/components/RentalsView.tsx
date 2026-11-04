@@ -74,6 +74,7 @@ export const RentalsView: React.FC = () => {
     cancelRental,
     createRental,
     updateRental,
+    updateRentalContractWithItems,
     addRentalItem,
     updateRentalItem,
     removeRentalItem
@@ -1476,7 +1477,11 @@ export const RentalsView: React.FC = () => {
         initialFocus={formInitialFocus}
         onSubmit={async (rentalData, itemsData) => {
           if (editingRentalId) {
-            await updateRental(editingRentalId, rentalData);
+            await updateRentalContractWithItems(editingRentalId, rentalData, itemsData);
+            if (selectedRentalId === editingRentalId) {
+              // El historial se guardo en la misma transaccion: actualizar la vista.
+              setActivities(await getRentalActivities(editingRentalId));
+            }
           } else {
             await createRental(rentalData as any, itemsData as any);
           }
