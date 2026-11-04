@@ -31,10 +31,10 @@ test('archivados quedan fuera de tarjetas y del selector de incorporación', () 
   assert.equal((html.match(/<article/g) || []).length, 0);
 });
 
-test('tablero vacío muestra las cinco etapas en el orden solicitado', () => {
+test('tablero vacío muestra las seis etapas en el orden solicitado', () => {
   const html = render([]);
   const stages = [...html.matchAll(/<section[^>]*aria-label="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(stages, ['Brief', 'Necesidad', 'Diseño', 'Manufactura', 'Entrega']);
+  assert.deepEqual(stages, ['Brief', 'Necesidad', 'Diseño', 'Propuesta', 'Manufactura', 'Entrega']);
   assert.match(html, /disabled=""[^>]*>.*Incorporar a Brief/);
 });
 
@@ -73,4 +73,12 @@ test('trasladar un registro ya incorporado no duplica ni reinicia su avance', as
   const updated = await transferLeadToPMO(source, async () => { assert.fail('No debe volver a guardar'); });
   assert.equal(updated.pmo_stage, 'Manufactura');
   assert.equal(getCommercialLeads([source]).length, 0);
+});
+
+test('Propuesta PMO muestra su tarjeta y permanece fuera del comercial', () => {
+  const project = lead('propuesta-pmo', { stage: 'Ingreso', pmo_stage: 'Propuesta' });
+  const html = render([project]);
+  assert.equal((html.match(/<article/g) || []).length, 1);
+  assert.match(html, /<option selected="">Propuesta<\/option>/);
+  assert.deepEqual(getCommercialLeads([project]), []);
 });
