@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
-  Kanban, 
+  Kanban,
+  ClipboardList, 
   Table, 
   Settings, 
   Landmark,
@@ -16,8 +17,8 @@ import { BrandConfig } from '../config/branding';
 import { RentasIcon, ContainerIcon } from './icons/BrandIcons';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'finance' | 'settings';
-  onViewChange: (view: 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'finance' | 'settings') => void;
+  currentView: 'dashboard' | 'pipeline' | 'pmo' | 'directory' | 'rentals' | 'inventory' | 'finance' | 'settings';
+  onViewChange: (view: 'dashboard' | 'pipeline' | 'pmo' | 'directory' | 'rentals' | 'inventory' | 'finance' | 'settings') => void;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
 }
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'pipeline', label: 'Pipeline', icon: Kanban },
+    { id: 'pmo', label: 'Pipeline PMO', icon: ClipboardList },
     { id: 'rentals', label: 'Rentas', icon: RentasIcon },
     { id: 'inventory', label: 'Inventario', icon: ContainerIcon },
     { id: 'finance', label: 'Finanzas', icon: Landmark },
