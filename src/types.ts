@@ -1,9 +1,13 @@
 export type Sentiment = 'Entusiasta' | 'Dudoso' | 'Preocupado' | string;
 
+export const PMO_STAGES = ['Brief', 'Necesidad', 'Diseño', 'Manufactura', 'Entrega'] as const;
+export type PMOStage = typeof PMO_STAGES[number];
+
 export interface Lead {
   id: string; // UUID
   project_name: string;
   stage: 'Ingreso' | 'Briefing' | 'Propuesta' | 'Cierre';
+  pmo_stage?: PMOStage | null;
   budget?: number;
   last_activity: string;
   sentiment_label: Sentiment;

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { LayoutDashboard, Kanban, Table, Settings, Plus, CheckCircle2, Landmark } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { LayoutDashboard, Kanban, Table, Settings, Plus, CheckCircle2, Landmark, ClipboardList } from 'lucide-react';
+import { getCommercialLeads } from './lib/pmoPipeline';
+import { PMOPipeline } from './components/PMOPipeline';
 import { KanbanBoard } from './components/KanbanBoard';
 import { DashboardView } from './components/DashboardView';
 import { DirectoryView } from './components/DirectoryView';
@@ -30,11 +32,12 @@ import { BrandConfig } from './config/branding';
 import { RentasIcon, ContainerIcon } from './components/icons/BrandIcons';
 
 type AuthMode = 'login' | 'signup' | 'forgot-password' | 'reset-password';
-type ViewType = 'dashboard' | 'pipeline' | 'directory' | 'rentals' | 'inventory' | 'finance' | 'settings';
+type ViewType = 'dashboard' | 'pipeline' | 'pmo' | 'directory' | 'rentals' | 'inventory' | 'finance' | 'settings';
 
 export default function App() {
   const { user, loading: authLoading, signOut, isPasswordRecovery, session, clearPasswordRecovery } = useAuth();
   const { leads, loading, createLead: supabaseCreateLead, updateLead: supabaseUpdateLead } = useSupabaseLeads();
+  const commercialLeads = useMemo(() => getCommercialLeads(leads), [leads]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
@@ -55,6 +58,7 @@ export default function App() {
     { id: 'inventory', label: 'Stock', icon: ContainerIcon },
   ] as const;
   const secondaryNavItems = [
+    { id: 'pmo', label: 'Pipeline PMO', icon: ClipboardList },
     { id: 'finance', label: 'Finanzas', icon: Landmark },
     { id: 'directory', label: 'Directorio', icon: Table },
     { id: 'settings', label: 'Ajustes', icon: Settings },
@@ -226,6 +230,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-black tracking-tight uppercase text-slate-900">
                 {currentView === 'pipeline' ? 'Pipeline Kanban' :
+                 currentView === 'pmo' ? 'Pipeline PMO' :
                  currentView === 'dashboard' ? '' :
                  currentView === 'directory' ? 'Directorio' :
                  currentView === 'rentals' ? 'Rentas' :
@@ -265,14 +270,14 @@ export default function App() {
                 {currentView === 'pipeline' && (
                   <div className="flex flex-col h-full">
                     <PipelineFilter 
-                      leads={leads} 
+                      leads={commercialLeads} 
                       onFilterChange={setFilteredLeads}
                       activeStage={activeMobileStage as any}
                       onStageChange={setActiveMobileStage}
                     />
                     <div className="flex-1 overflow-hidden">
                       <KanbanBoard
-                        leads={filteredLeads}
+                        leads={filteredLeads.filter(lead => commercialLeads.some(current => current.id === lead.id))}
                         onUpdateLead={handleUpdateLead}
                         onSelectLead={(lead) => setSelectedLeadId(lead.id)}
                         activeMobileStage={activeMobileStage}
@@ -280,6 +285,9 @@ export default function App() {
                       />
                     </div>
                   </div>
+                )}
+                {currentView === 'pmo' && (
+                  <PMOPipeline leads={leads} onUpdateLead={supabaseUpdateLead} onSelectLead={(lead) => setSelectedLeadId(lead.id)} />
                 )}
                 {currentView === 'dashboard' && <DashboardView leads={leads} />}
                 {currentView === 'directory' && (
