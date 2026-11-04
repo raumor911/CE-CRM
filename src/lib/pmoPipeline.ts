@@ -1,4 +1,4 @@
-import { Lead } from '../types';
+import { Lead, PMOStage, PMO_STAGES } from '../types';
 
 export function getCommercialLeads(leads: Lead[]): Lead[] {
   return leads.filter(lead => !lead.is_archived && !lead.pmo_stage);
@@ -11,9 +11,15 @@ export async function transferLeadToPMO(
 ): Promise<Lead> {
   if (lead.is_archived) throw new Error('El proyecto está archivado.');
   if (lead.pmo_stage) return lead; // Never reset a project already in PMO.
-  const updated = await updateLead(lead.id, { pmo_stage: 'Brief' });
-  if (!updated || updated.id !== lead.id || updated.pmo_stage !== 'Brief') {
+  const updated = await updateLead(lead.id, { pmo_stage: 'Necesidad' });
+  if (!updated || updated.id !== lead.id || updated.pmo_stage !== 'Necesidad') {
     throw new Error('No se confirmó el traslado a PMO.');
   }
   return updated;
+}
+
+// Keep pre-migration Brief cards visible in the first PMO column.
+export function getPMOStage(stage: string | null | undefined): PMOStage | null {
+  if (stage === 'Brief') return 'Necesidad';
+  return PMO_STAGES.includes(stage as PMOStage) ? stage as PMOStage : null;
 }

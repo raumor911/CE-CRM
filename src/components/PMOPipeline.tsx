@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { DndContext, DragEndEvent, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { GripVertical, Search, Plus, Loader2 } from 'lucide-react';
 import { Lead, PMOStage, PMO_STAGES } from '../types';
+import { getPMOStage } from '../lib/pmoPipeline';
 import { cn } from '../lib/utils';
 
 interface PMOPipelineProps {
@@ -10,7 +11,7 @@ interface PMOPipelineProps {
   onSelectLead: (lead: Lead) => void;
 }
 
-const stageColors = ['bg-blue-500', 'bg-amber-500', 'bg-indigo-500', 'bg-orange-500', 'bg-violet-500', 'bg-emerald-500'];
+const stageColors = ['bg-amber-500', 'bg-indigo-500', 'bg-orange-500', 'bg-violet-500', 'bg-emerald-500'];
 
 const ProjectCard: React.FC<{
   lead: Lead;
@@ -69,7 +70,9 @@ export function PMOPipeline({ leads, onUpdateLead, onSelectLead }: PMOPipelinePr
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
   );
   const activeLeads = leads.filter(lead => !lead.is_archived);
-  const projects = activeLeads.filter(lead => lead.pmo_stage && PMO_STAGES.includes(lead.pmo_stage));
+  const projects = activeLeads
+    .map(lead => ({ ...lead, pmo_stage: getPMOStage(lead.pmo_stage) }))
+    .filter(lead => lead.pmo_stage);
   const candidates = activeLeads.filter(lead => !lead.pmo_stage);
   const normalizedQuery = query.trim().toLocaleLowerCase('es');
   const visibleProjects = projects.filter(lead => `${lead.project_name} ${lead.lead_name}`.toLocaleLowerCase('es').includes(normalizedQuery));
@@ -105,7 +108,7 @@ export function PMOPipeline({ leads, onUpdateLead, onSelectLead }: PMOPipelinePr
     <div className="p-0 md:p-6 py-4">
       <h1 className="md:hidden text-xl font-black text-slate-900 mb-2">Pipeline PMO</h1>
       <p className="text-sm text-slate-500 mb-5">Gestiona tus proyectos desde el brief hasta la entrega.</p>
-      <form onSubmit={event => { event.preventDefault(); void saveStage(candidateId, 'Brief'); }} className="flex flex-col sm:flex-row sm:items-end gap-3 mb-5">
+      <form onSubmit={event => { event.preventDefault(); void saveStage(candidateId, 'Necesidad'); }} className="flex flex-col sm:flex-row sm:items-end gap-3 mb-5">
         <label className="flex-1 text-xs font-bold text-slate-600" htmlFor="pmo-project">Incorporar proyecto existente
           <select id="pmo-project" value={candidateId} onChange={event => setCandidateId(event.target.value)} disabled={busy}
             className="block mt-2 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm font-normal">
@@ -114,7 +117,7 @@ export function PMOPipeline({ leads, onUpdateLead, onSelectLead }: PMOPipelinePr
           </select>
         </label>
         <button type="submit" disabled={!candidateId || busy} className="flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-lg px-4 py-3 text-sm font-bold disabled:opacity-50">
-          {busy ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Incorporar a Brief
+          {busy ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Incorporar a Necesidad
         </button>
       </form>
       {notice && <p role={notice.error ? 'alert' : 'status'} className={cn('p-3 rounded-lg text-sm mb-4', notice.error ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700')}>{notice.text}</p>}

@@ -3,11 +3,11 @@
 Acceso en escritorio: debajo de Pipeline. En móvil: Más → Pipeline PMO.
 
 1. Aplicar `supabase/migrations/20261104000000_add_pmo_pipeline_to_leads.sql` en el SQL Editor de Supabase antes de utilizar PMO. ALTER TABLE toma un bloqueo breve; programar fuera de alta actividad si leads es grande.
-2. En la tarjeta comercial, pulsar **Pasar a PMO**. Al confirmar el guardado, desaparece del tablero comercial y aparece en Brief en PMO. También puede seleccionarse un registro existente desde PMO e incorporarlo a Brief. Para un cliente nuevo, crearlo primero desde Pipeline → Nuevo Lead.
-3. Mover entre Brief, Necesidad, Diseño, Propuesta, Manufactura y Entrega arrastrando la tarjeta o usando su selector (también accesible por teclado y móvil).
+2. En la tarjeta comercial, pulsar **Pasar a PMO**. Al confirmar el guardado, desaparece del tablero comercial y aparece en Necesidad en PMO. También puede seleccionarse un registro existente desde PMO e incorporarlo a Necesidad. Para un cliente nuevo, crearlo primero desde Pipeline → Nuevo Lead.
+3. Mover entre Necesidad, Diseño, Propuesta, Manufactura y Entrega arrastrando la tarjeta o usando su selector (también accesible por teclado y móvil).
 4. Pulsar el nombre para abrir el expediente existente: documentos, contacto y datos compartidos.
 
-Datos: se reutiliza public.leads, su hook y suscripción en tiempo real, así como las políticas RLS existentes. El único campo nuevo es pmo_stage, nullable y con CHECK de seis valores. NULL deja el registro fuera de PMO; no se incorpora ningún cliente automáticamente. Comercial muestra únicamente registros sin pmo_stage: una misma tarjeta no aparece simultáneamente en ambos pipelines. El traslado conserva el UUID, documentos, actividades y datos financieros; no inserta ni clona registros. No se modifica stage ni last_activity al avanzar dentro de PMO para no alterar las reglas comerciales de seguimiento. Los registros archivados siguen excluidos. Cada lead representa un proyecto; no se introducen múltiples proyectos por lead en este alcance.
+Datos: se reutiliza public.leads, su hook y suscripción en tiempo real, así como las políticas RLS existentes. El único campo nuevo es pmo_stage, nullable y con CHECK de cinco valores. NULL deja el registro fuera de PMO; no se incorpora ningún cliente automáticamente. Comercial muestra únicamente registros sin pmo_stage: una misma tarjeta no aparece simultáneamente en ambos pipelines. El traslado conserva el UUID, documentos, actividades y datos financieros; no inserta ni clona registros. No se modifica stage ni last_activity al avanzar dentro de PMO para no alterar las reglas comerciales de seguimiento. Los registros archivados siguen excluidos. Cada lead representa un proyecto; no se introducen múltiples proyectos por lead en este alcance.
 
 La migración es transaccional y repetible. No se ha ejecutado contra producción. Si falta el campo, consultar el tablero comercial sigue funcionando y PMO muestra un error al intentar guardar, sin confirmar un cambio no persistido.
 
@@ -16,3 +16,7 @@ Validación: `npm run lint`, `npm run build`, `node --import tsx --test tests/pm
 ## Etapa Propuesta
 
 Aplicar `supabase/migrations/20261104010000_add_propuesta_pmo_stage.sql` después de la migración inicial para aceptar Propuesta entre Diseño y Manufactura. Conserva los datos actuales y modifica solamente el CHECK de pmo_stage.
+
+## Eliminar Brief
+
+Aplicar `supabase/migrations/20261104020000_remove_brief_pmo_stage.sql`. Migra únicamente los proyectos con pmo_stage = Brief a Necesidad y reemplaza el CHECK con las cinco etapas definitivas. La interfaz presenta cualquier Brief heredado dentro de Necesidad hasta que se aplique el SQL, sin ocultar las tarjetas. Tanto el traslado desde comercial como la incorporación desde PMO empiezan en Necesidad.

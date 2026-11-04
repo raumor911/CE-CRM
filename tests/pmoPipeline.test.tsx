@@ -31,22 +31,22 @@ test('archivados quedan fuera de tarjetas y del selector de incorporación', () 
   assert.equal((html.match(/<article/g) || []).length, 0);
 });
 
-test('tablero vacío muestra las seis etapas en el orden solicitado', () => {
+test('tablero vacío muestra las cinco etapas en el orden solicitado', () => {
   const html = render([]);
   const stages = [...html.matchAll(/<section[^>]*aria-label="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(stages, ['Brief', 'Necesidad', 'Diseño', 'Propuesta', 'Manufactura', 'Entrega']);
-  assert.match(html, /disabled=""[^>]*>.*Incorporar a Brief/);
+  assert.deepEqual(stages, ['Necesidad', 'Diseño', 'Propuesta', 'Manufactura', 'Entrega']);
+  assert.match(html, /disabled=""[^>]*>.*Incorporar a Necesidad/);
 });
 
 import { getCommercialLeads, transferLeadToPMO } from '../src/lib/pmoPipeline';
 
-test('traslado actualiza el mismo UUID a Brief y deja una sola tarjeta en PMO', async () => {
+test('traslado actualiza el mismo UUID a Necesidad y deja una sola tarjeta en PMO', async () => {
   const source = lead('proyecto', { budget: 250000, category: '10 ft Modificado' });
   let calls = 0;
   const updated = await transferLeadToPMO(source, async (id, updates) => {
     calls++;
     assert.equal(id, source.id);
-    assert.deepEqual(updates, { pmo_stage: 'Brief' });
+    assert.deepEqual(updates, { pmo_stage: 'Necesidad' });
     return { ...source, ...updates };
   });
   assert.equal(calls, 1);
@@ -56,7 +56,7 @@ test('traslado actualiza el mismo UUID a Brief y deja una sola tarjeta en PMO', 
   assert.equal(getCommercialLeads([updated]).length, 0);
   const html = render([updated]);
   assert.equal((html.match(/<article/g) || []).length, 1);
-  assert.match(html, /<option selected="">Brief<\/option>/);
+  assert.match(html, /<option selected="">Necesidad<\/option>/);
 });
 
 test('si falla el guardado, el registro permanece comercial y se propaga el error', async () => {
@@ -81,4 +81,13 @@ test('Propuesta PMO muestra su tarjeta y permanece fuera del comercial', () => {
   assert.equal((html.match(/<article/g) || []).length, 1);
   assert.match(html, /<option selected="">Propuesta<\/option>/);
   assert.deepEqual(getCommercialLeads([project]), []);
+});
+
+test('tarjetas heredadas en Brief siguen visibles en Necesidad mientras se aplica la migración', () => {
+  const legacy = { ...lead('heredado'), pmo_stage: 'Brief' } as unknown as Lead;
+  const html = render([legacy]);
+  assert.equal((html.match(/<article/g) || []).length, 1);
+  assert.match(html, /<option selected="">Necesidad<\/option>/);
+  assert.doesNotMatch(html, /aria-label="Brief"/);
+  assert.deepEqual(getCommercialLeads([legacy]), []);
 });
