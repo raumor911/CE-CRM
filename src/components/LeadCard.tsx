@@ -1,5 +1,4 @@
 import React from 'react';
-import { TransferToPMOButton } from './TransferToPMOButton';
 import { motion } from 'motion/react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -209,8 +208,6 @@ export const LeadCard: React.FC<LeadCardProps> = ({ lead, onUpdateLead, onSelect
             <span>Definir Presupuesto</span>
           </button>
         )}
-
-        {!isOverlay && <TransferToPMOButton lead={lead} onUpdateLead={onUpdateLead} />}
 
         {/* Sección de acciones (conservamos WhatsApp y Detalle) */}
         <div className="flex items-center justify-between pt-2 border-t border-zinc-100">

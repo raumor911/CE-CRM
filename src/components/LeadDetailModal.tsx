@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TransferToPMOButton } from './TransferToPMOButton';
 import { 
   X, 
   Calendar, 
@@ -528,6 +529,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 */}
               </div> 
             </div>
+
+            {!lead.pmo_stage && !lead.is_archived && (
+              <TransferToPMOButton lead={lead} onUpdateLead={onUpdate} />
+            )}
 
             {/* INFORMACIÓN DE CONTACTO */}
             <div className="space-y-4">
