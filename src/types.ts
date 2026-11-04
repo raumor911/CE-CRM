@@ -1,6 +1,6 @@
 export type Sentiment = 'Entusiasta' | 'Dudoso' | 'Preocupado' | string;
 
-export const PMO_STAGES = ['Brief', 'Necesidad', 'Diseño', 'Manufactura', 'Entrega'] as const;
+export const PMO_STAGES = ['Brief', 'Necesidad', 'Diseño', 'Propuesta', 'Manufactura', 'Entrega'] as const;
 export type PMOStage = typeof PMO_STAGES[number];
 
 export interface Lead {
