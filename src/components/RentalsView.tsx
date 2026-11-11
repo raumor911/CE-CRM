@@ -1009,13 +1009,14 @@ export const RentalsView: React.FC = () => {
                           <button
                             type="button"
                             aria-label={`Agregar renta a ${group.clientName}`}
+                            title="Agregar renta"
                             onClick={event => {
                               event.stopPropagation();
                               openNewRental(customer);
                             }}
-                            className="mt-2 inline-flex items-center gap-1 rounded-lg border border-indigo-100 px-2 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
+                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-indigo-700 hover:bg-indigo-50 focus-visible:outline-2 focus-visible:outline-indigo-600 md:h-7 md:w-7"
                           >
-                            <Plus size={14} aria-hidden="true" /> Agregar renta
+                            <Plus size={16} aria-hidden="true" />
                           </button>
                         ) : null;
 
@@ -1046,6 +1047,7 @@ export const RentalsView: React.FC = () => {
                                   <div>
                                     <div className="font-black text-zinc-900 text-xs uppercase tracking-tight flex items-center gap-2">
                                       {group.clientName}
+                                      {addRental}
                                       {hasMultiple && (
                                         <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest border border-indigo-100">
                                           {group.rentals.length} rentas
@@ -1057,7 +1059,6 @@ export const RentalsView: React.FC = () => {
                                         {[group.rentals[0].project_name, group.rentals[0].location].filter(Boolean).join(' - ') || 'Sin ubicación'}
                                       </div>
                                     )}
-                                    {addRental}
                                   </div>
                                 </div>
                               </td>
@@ -1119,7 +1120,10 @@ export const RentalsView: React.FC = () => {
                                     }}
                                   >
                                     <div className="flex-1 min-w-0 pr-4">
-                                      <h3 className="font-black text-zinc-900 text-base uppercase tracking-tight truncate">{group.clientName}</h3>
+                                      <div className="flex items-center gap-1">
+                                        <h3 className="min-w-0 truncate font-black text-zinc-900 text-base uppercase tracking-tight">{group.clientName}</h3>
+                                        {addRental}
+                                      </div>
                                       <div className="flex items-center gap-3 mt-1.5">
                                         <div className="flex items-center gap-1.5">
                                           <Package size={12} className="text-zinc-400" />
@@ -1148,7 +1152,6 @@ export const RentalsView: React.FC = () => {
                                     </div>
                                   </motion.div>
 
-                                  {addRental && <div className="px-5 pb-3">{addRental}</div>}
                                   <AnimatePresence>
                                     {isExpanded && (
                                       <motion.div 
