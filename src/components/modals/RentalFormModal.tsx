@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Rental, RentalItem } from '../../types';
+import { ExistingRentalCustomer, Rental, RentalItem } from '../../types';
 import { buildExistingCustomers, normalizeCustomerName, cleanCustomerName } from '../../utils/customerIdentity';
-import { CustomerSelector } from '../rentals/CustomerSelector';
 
 export interface RentalFormModalProps {
   isOpen: boolean;
@@ -11,15 +10,16 @@ export interface RentalFormModalProps {
   onSubmit: (rentalData: Partial<Rental>, itemsData: Partial<RentalItem>[]) => Promise<void>;
   existingRentals: Rental[];
   initialData?: Rental | null;
+  initialCustomer?: ExistingRentalCustomer | null;
   initialItems?: RentalItem[];
   initialFocus?: string;
 }
 
-export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClose, onSubmit, existingRentals, initialData, initialItems, initialFocus }) => {
+export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClose, onSubmit, existingRentals, initialData, initialCustomer, initialItems, initialFocus }) => {
   // Rental basic info
   const [formData, setFormData] = useState({
-    customer_name: initialData?.customer_name || '',
-    customer_phone: initialData?.customer_phone || '',
+    customer_name: initialData?.customer_name || initialCustomer?.customerName || '',
+    customer_phone: initialData?.customer_phone || initialCustomer?.primaryPhone || '',
     project_name: initialData?.project_name || '',
     location: initialData?.location || '',
     start_date: initialData?.start_date ? initialData.start_date.split('T')[0] : new Date().toISOString().split('T')[0],
@@ -43,7 +43,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
   const submissionInFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedCustomerKey, setSelectedCustomerKey] = useState<string | null>(null);
+  const [selectedCustomerKey, setSelectedCustomerKey] = useState(initialCustomer?.key || '');
   
   const existingCustomers = useMemo(
     () => buildExistingCustomers(existingRentals),
@@ -53,8 +53,8 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
   useEffect(() => {
     if (isOpen) {
       setFormData({
-        customer_name: initialData?.customer_name || '',
-        customer_phone: initialData?.customer_phone || '',
+        customer_name: initialData?.customer_name || initialCustomer?.customerName || '',
+        customer_phone: initialData?.customer_phone || initialCustomer?.primaryPhone || '',
         project_name: initialData?.project_name || '',
         location: initialData?.location || '',
         start_date: initialData?.start_date ? initialData.start_date.split('T')[0] : new Date().toISOString().split('T')[0],
@@ -72,6 +72,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
             }]
       );
       setError(null);
+      setSelectedCustomerKey(initialCustomer?.key || '');
       
       if (initialFocus) {
         setTimeout(() => {
@@ -80,7 +81,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
         }, 100);
       }
     }
-  }, [isOpen, initialData, initialItems, initialFocus]);
+  }, [isOpen, initialData, initialCustomer, initialItems, initialFocus]);
 
   const handleItemChange = (index: number, field: keyof RentalItem, value: any) => {
     const newItems = [...items];
@@ -196,7 +197,7 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
         contractual_end_date: '',
       });
       setItems([{ equipment_description: '', quantity: 1, subtotal_monthly: 0, tax_monthly: 0, monthly_total: 0 }]);
-      setSelectedCustomerKey(null);
+      setSelectedCustomerKey('');
       onClose();
     } catch (err: any) {
       setError(err.message || 'No fue posible guardar la renta. Verifica los datos e intenta nuevamente.');
@@ -280,29 +281,47 @@ export const RentalFormModal: React.FC<RentalFormModalProps> = ({ isOpen, onClos
                       />
                     </div>
                   ) : (
-                    <CustomerSelector
-                      value={formData.customer_name}
-                      customers={existingCustomers}
-                      selectedCustomerKey={selectedCustomerKey}
-                      onChange={value => {
-                        setSelectedCustomerKey(null);
-                        setFormData(previous => ({
-                          ...previous,
-                          customer_name: value,
-                        }));
-                      }}
-                      onSelect={customer => {
-                        setSelectedCustomerKey(customer.key);
-                        setFormData(previous => ({
-                          ...previous,
-                          customer_name: customer.customerName,
-                          customer_phone:
-                            previous.customer_phone ||
-                            customer.primaryPhone ||
-                            '',
-                        }));
-                      }}
-                    />
+                    <div className="space-y-2">
+                      <label htmlFor="rental-customer" className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                        Cliente <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        id="rental-customer"
+                        required
+                        className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-base md:text-sm text-zinc-900"
+                        value={selectedCustomerKey}
+                        onChange={event => {
+                          const key = event.target.value;
+                          const customer = existingCustomers.find(item => item.key === key);
+                          setSelectedCustomerKey(key);
+                          setFormData(previous => ({
+                            ...previous,
+                            customer_name: customer?.customerName || '',
+                            customer_phone: customer?.primaryPhone || '',
+                          }));
+                        }}
+                      >
+                        <option value="">Selecciona un cliente</option>
+                        <option value="new">Cliente nuevo</option>
+                        {existingCustomers.map(customer => (
+                          <option key={customer.key} value={customer.key}>{customer.customerName}</option>
+                        ))}
+                      </select>
+                      {selectedCustomerKey === 'new' && (
+                        <input
+                          required
+                          type="text"
+                          aria-label="Nombre del cliente nuevo"
+                          placeholder="Escribe el nombre del cliente…"
+                          className="w-full px-4 py-3 rounded-xl border border-zinc-200 bg-zinc-50 text-base md:text-sm text-zinc-900"
+                          value={formData.customer_name}
+                          onChange={event => {
+                            const customer_name = event.target.value;
+                            setFormData(previous => ({ ...previous, customer_name }));
+                          }}
+                        />
+                      )}
+                    </div>
                   )}
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">

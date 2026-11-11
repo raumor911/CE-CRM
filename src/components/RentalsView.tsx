@@ -3,6 +3,8 @@ import { useRentals, RentalWithItems } from '../hooks/useRentals';
 import { useRentalPayments } from '../hooks/useRentalPayments';
 import { RentalActivity, RentalItem, RentalPayment } from '../types';
 import { RentalFormModal } from './modals/RentalFormModal';
+import type { ExistingRentalCustomer } from '../types';
+import { buildExistingCustomers } from '../utils/customerIdentity';
 import { ContainerIcon } from './icons/BrandIcons';
 import { 
   Building2, 
@@ -103,6 +105,7 @@ export const RentalsView: React.FC = () => {
 
   // Form Modal
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [initialRentalCustomer, setInitialRentalCustomer] = useState<ExistingRentalCustomer | null>(null);
   const [editingRentalId, setEditingRentalId] = useState<string | null>(null);
   const [formInitialFocus, setFormInitialFocus] = useState<string | undefined>(undefined);
 
@@ -391,6 +394,18 @@ export const RentalsView: React.FC = () => {
   }, [rentals, searchQuery, filters, paymentStateMap]);
 
   
+  const customerByKey = useMemo(
+    () => new Map(buildExistingCustomers(rentals).map(customer => [customer.key, customer])),
+    [rentals],
+  );
+
+  const openNewRental = (customer: ExistingRentalCustomer | null = null) => {
+    setEditingRentalId(null);
+    setInitialRentalCustomer(customer);
+    setFormInitialFocus(undefined);
+    setIsFormOpen(true);
+  };
+
   const groupedRentals = useMemo(() => {
     const groups = new Map<
       string,
@@ -554,7 +569,7 @@ export const RentalsView: React.FC = () => {
           <h1 className="text-xl md:text-2xl font-black text-zinc-900 uppercase tracking-tight md:hidden">Rentas</h1>
           <div className="flex-1" />
           <button 
-            onClick={() => { setEditingRentalId(null); setIsFormOpen(true); }}
+            onClick={() => openNewRental()}
             className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-bold rounded-xl shadow-lg shadow-zinc-900/10 transition-all active:scale-95"
           >
             <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Nueva Renta</span>
@@ -989,6 +1004,20 @@ export const RentalsView: React.FC = () => {
                       groupedRentals.map((group) => {
                         const isExpanded = searchQuery ? true : expandedGroups.has(group.key);
                         const hasMultiple = group.rentals.length > 1;
+                        const customer = customerByKey.get(group.key);
+                        const addRental = customer ? (
+                          <button
+                            type="button"
+                            aria-label={`Agregar renta a ${group.clientName}`}
+                            onClick={event => {
+                              event.stopPropagation();
+                              openNewRental(customer);
+                            }}
+                            className="mt-2 inline-flex items-center gap-1 rounded-lg border border-indigo-100 px-2 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
+                          >
+                            <Plus size={14} aria-hidden="true" /> Agregar renta
+                          </button>
+                        ) : null;
 
                         return (
                           <React.Fragment key={group.key}>
@@ -1028,6 +1057,7 @@ export const RentalsView: React.FC = () => {
                                         {[group.rentals[0].project_name, group.rentals[0].location].filter(Boolean).join(' - ') || 'Sin ubicación'}
                                       </div>
                                     )}
+                                    {addRental}
                                   </div>
                                 </div>
                               </td>
@@ -1118,6 +1148,7 @@ export const RentalsView: React.FC = () => {
                                     </div>
                                   </motion.div>
 
+                                  {addRental && <div className="px-5 pb-3">{addRental}</div>}
                                   <AnimatePresence>
                                     {isExpanded && (
                                       <motion.div 
@@ -1470,10 +1501,11 @@ export const RentalsView: React.FC = () => {
       {/* Modals */}
       <RentalFormModal 
         isOpen={isFormOpen} 
-        onClose={() => { setIsFormOpen(false); setFormInitialFocus(undefined); }} 
+        onClose={() => { setIsFormOpen(false); setFormInitialFocus(undefined); setInitialRentalCustomer(null); }}
         existingRentals={rentals}
         initialData={editingRentalId ? rentals.find(r => r.id === editingRentalId) || null : null}
-        initialItems={editingRentalId ? rentals.find(r => r.id === editingRentalId)?.items || [] : []}
+        initialItems={editingRentalId ? rentals.find(r => r.id === editingRentalId)?.items : undefined}
+        initialCustomer={initialRentalCustomer}
         initialFocus={formInitialFocus}
         onSubmit={async (rentalData, itemsData) => {
           if (editingRentalId) {
