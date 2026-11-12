@@ -108,7 +108,10 @@ export const importLeadsFromCSV = async (csvText: string, targetStage: 'Ingreso'
 
   if (leadsToInsert.length === 0) return { success: false, message: 'No se encontraron datos válidos.' };
 
-  const { error } = await supabase.from('leads').insert(leadsToInsert);
+  const { error } = await supabase.rpc('create_leads_with_timeline', {
+    p_leads: leadsToInsert,
+    p_import: true,
+  });
 
   if (error) {
     console.error('Error importing leads:', error);

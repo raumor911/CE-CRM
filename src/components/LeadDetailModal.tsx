@@ -26,6 +26,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Lead, LeadDocument, LeadActivity } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
+import { buildLeadTimeline, formatTimelineDate, type LeadStageEvent } from '../lib/leadTimeline';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useEffect } from 'react';
@@ -49,6 +50,12 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   const [newNote, setNewNote] = useState('');
   const [documents, setDocuments] = useState<LeadDocument[]>([]);
   const [activities, setActivities] = useState<LeadActivity[]>([]);
+  const [stageEvents, setStageEvents] = useState<LeadStageEvent[]>([]);
+  const [timelineError, setTimelineError] = useState(false);
+  const timeline = React.useMemo(
+    () => buildLeadTimeline(activities, stageEvents, lead.created_at),
+    [activities, stageEvents, lead.created_at],
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
@@ -74,16 +81,19 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
   const fetchActivities = async () => {
     if (!lead.id) return;
     setIsLoadingActivities(true);
+    setTimelineError(false);
     try {
-      const { data, error } = await supabase
-        .from('lead_activities')
-        .select('*')
-        .eq('lead_id', lead.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setActivities(data || []);
+      const [activityResult, stageResult] = await Promise.all([
+        supabase.from('lead_activities').select('*').eq('lead_id', lead.id)
+          .order('created_at', { ascending: false }),
+        supabase.from('lead_stage_events').select('*').eq('lead_id', lead.id)
+          .order('created_at', { ascending: false }).order('id', { ascending: false }),
+      ]);
+      setActivities(activityResult.data || []);
+      setStageEvents(stageResult.data || []);
+      setTimelineError(Boolean(activityResult.error || stageResult.error));
     } catch (error) {
+      setTimelineError(true);
       console.error('Error fetching activities:', error);
     } finally {
       setIsLoadingActivities(false);
@@ -115,7 +125,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     } else if (activeTab === 'timeline') {
       fetchActivities();
     }
-  }, [activeTab, lead.id]);
+  }, [activeTab, lead.id, lead.stage, lead.pmo_stage]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -767,13 +777,24 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                       </button>
                     </div>
 
+                    {!isLoadingActivities && timelineError && (
+                      <p role="status" className="text-sm text-amber-700">
+                        No se pudo cargar todo el historial.{' '}
+                        <button type="button" onClick={fetchActivities} className="underline">Reintentar</button>
+                      </p>
+                    )}
+                    {!isLoadingActivities && !timelineError && !stageEvents.some(event => event.kind === 'created') && (
+                      <p className="text-xs text-zinc-500">
+                        Los movimientos anteriores al registro de etapas no están verificados.
+                      </p>
+                    )}
                     {isLoadingActivities ? (
                       <div className="flex flex-col items-center justify-center py-12 gap-4">
                         <Loader2 className="w-8 h-8 text-zinc-900 animate-spin" />
                         <p className="text-sm text-zinc-500">Cargando historial...</p>
                       </div>
-                    ) : activities.length > 0 ? (
-                      activities.map((activity) => (
+                    ) : timeline.length > 0 ? (
+                      timeline.map((activity) => (
                         <div key={activity.id} className="relative pl-8 border-l border-zinc-100 pb-8 last:pb-0">
                           <div className={cn(
                             "absolute left-[-5px] top-0 w-[9px] h-[9px] rounded-full shadow-sm",
@@ -788,7 +809,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                             <div className="flex items-center gap-3">
                               <span className="text-xs font-bold text-zinc-900">{activity.type}</span>
                               <span className="text-[10px] text-zinc-400">
-                                {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true, locale: es })}
+                                {activity.exactDate
+                                  ? formatTimelineDate(activity.created_at)
+                                  : formatDistanceToNow(new Date(activity.created_at), { addSuffix: true, locale: es })}
                               </span>
                             </div>
                             <p className="text-sm text-zinc-600 leading-relaxed">

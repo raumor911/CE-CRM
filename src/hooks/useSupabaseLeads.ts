@@ -32,9 +32,7 @@ export function useSupabaseLeads() {
   const createLead = async (lead: Omit<Lead, 'id'>) => {
     try {
       const { data, error } = await supabase
-        .from('leads')
-        .insert([{ ...lead, user_id: user?.id }])
-        .select();
+        .rpc('create_leads_with_timeline', { p_leads: [lead] });
 
       if (error) throw error;
       
@@ -54,20 +52,18 @@ export function useSupabaseLeads() {
 
   const updateLead = async (id: string, updates: Partial<Lead>) => {
     try {
-      console.log('Actualizando lead:', id, updates);
-      const { data, error } = await supabase
-        .from('leads')
-        .update(updates)
-        .eq('id', id)
-        .select();
+      const changesStage = updates.stage !== undefined || updates.pmo_stage !== undefined;
+      const { data, error } = changesStage
+        ? await supabase.rpc('move_lead_with_timeline', { p_id: id, p_updates: updates }).single()
+        : await supabase.from('leads').update(updates).eq('id', id).select().maybeSingle();
 
       if (error) {
         console.error('Error de Supabase al actualizar:', error);
         throw error;
       }
       
-      if (data && data[0]) {
-        const updated = data[0];
+      if (data) {
+        const updated: Lead = data;
         setLeads(prev => {
           const isNowActive = !updated.is_archived;
           const wasAlreadyActive = prev.some(l => l.id === id);
@@ -84,7 +80,7 @@ export function useSupabaseLeads() {
           return prev.map(l => l.id === id ? updated : l);
         });
       }
-      return data?.[0];
+      return data;
     } catch (err: any) {
       setError(err.message);
       throw err;
