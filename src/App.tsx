@@ -124,7 +124,9 @@ export default function App() {
     try {
       const updatedLead = await supabaseUpdateLead(id, {
         ...updates,
-        last_activity: new Date().toISOString()
+        ...(updates.stage === undefined && updates.pmo_stage === undefined
+          ? { last_activity: new Date().toISOString() }
+          : {})
       });
 
       if (!updatedLead) {
@@ -330,6 +332,7 @@ export default function App() {
         )}
         {selectedLead && (
           <LeadDetailModal
+            key={selectedLead.id}
             lead={selectedLead}
             onClose={() => setSelectedLeadId(null)}
             onUpdate={handleUpdateLead}
