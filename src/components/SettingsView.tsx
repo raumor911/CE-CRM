@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { Settings, DollarSign, Clock, Bell, Shield, Save, CheckCircle2, User as UserIcon } from 'lucide-react';
+import { Settings, Tags, Clock, Bell, Shield, Save, CheckCircle2, User as UserIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { importLeadsFromCSV } from '../lib/importLeads';
+import { cn } from '../lib/utils';
+import { QuotePricingView } from './QuotePricingView';
+
+type SectionId = 'general' | 'pricing' | 'notifications' | 'security';
 
 export const SettingsView: React.FC = () => {
   const [costPerHour, setCostPerHour] = useState(50);
+  const [section, setSection] = useState<SectionId>('general');
   const [showSaved, setShowSaved] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
   const [provisioningError, setProvisioningError] = useState<string | null>(null);
@@ -16,27 +21,30 @@ export const SettingsView: React.FC = () => {
     setTimeout(() => setShowSaved(false), 3000);
   };
 
-  const sections = [
-    { id: 'general', label: 'General', icon: Settings },
-    { id: 'pricing', label: 'Costos y Tarifas', icon: DollarSign },
-    { id: 'notifications', label: 'Notificaciones', icon: Bell },
-    { id: 'security', label: 'Seguridad', icon: Shield },
+  // Notificaciones y Seguridad todavía no tienen contenido: se muestran desactivadas en vez de simular que abren algo.
+  const sections: { id: SectionId; label: string; icon: typeof Settings; available: boolean }[] = [
+    { id: 'general', label: 'General', icon: Settings, available: true },
+    { id: 'pricing', label: 'Precios y cotizaciones', icon: Tags, available: true },
+    { id: 'notifications', label: 'Notificaciones', icon: Bell, available: false },
+    { id: 'security', label: 'Seguridad', icon: Shield, available: false },
   ];
 
   return (
-    <div className="p-4 md:p-8 space-y-8 max-w-4xl mx-auto pb-32 md:pb-8 bg-zinc-50 min-h-full">
+    <div className={cn('p-4 md:p-8 space-y-8 mx-auto pb-32 md:pb-8 bg-zinc-50 min-h-full', section === 'pricing' ? 'max-w-6xl' : 'max-w-4xl')}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 safe-top">
         <div>
           <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 uppercase">Configuración</h1>
           <p className="text-slate-500 text-xs md:text-sm font-medium">Ajusta los parámetros globales y preferencias.</p>
         </div>
-        <button
-          onClick={handleSave}
-          className="flex items-center justify-center gap-3 bg-zinc-900 text-white font-black text-[10px] md:text-xs uppercase tracking-[0.2em] h-14 md:h-12 px-8 rounded-2xl transition-all shadow-xl shadow-zinc-900/10 active:scale-95 w-full md:w-auto"
-        >
-          <Save size={18} />
-          <span>Guardar Cambios</span>
-        </button>
+        {section === 'general' && (
+          <button
+            onClick={handleSave}
+            className="flex items-center justify-center gap-3 bg-zinc-900 text-white font-black text-[10px] md:text-xs uppercase tracking-[0.2em] h-14 md:h-12 px-8 rounded-2xl transition-all shadow-xl shadow-zinc-900/10 active:scale-95 w-full md:w-auto"
+          >
+            <Save size={18} />
+            <span>Guardar Cambios</span>
+          </button>
+        )}
       </div>
 
       <AnimatePresence>
@@ -53,19 +61,32 @@ export const SettingsView: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col gap-8">
-        <div className="flex md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-          {sections.map(section => (
+      <div className="flex flex-col md:flex-row gap-8">
+        <nav aria-label="Secciones de ajustes" className="flex md:flex-col overflow-x-auto md:overflow-x-visible pb-2 md:pb-0 gap-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:w-64 md:shrink-0 md:self-start">
+          {sections.map(item => (
             <button
-              key={section.id}
-              className="flex-shrink-0 md:w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-100 shadow-sm md:shadow-none bg-white md:bg-transparent"
+              key={item.id}
+              type="button"
+              disabled={!item.available}
+              aria-current={section === item.id ? 'page' : undefined}
+              title={item.available ? undefined : 'Próximamente'}
+              onClick={() => setSection(item.id)}
+              className={cn(
+                'flex-shrink-0 md:w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm md:shadow-none',
+                section === item.id
+                  ? 'bg-zinc-900 text-white border-zinc-900'
+                  : 'bg-white md:bg-transparent text-slate-400 border-transparent hover:text-slate-900 hover:bg-white hover:border-slate-100',
+                !item.available && 'opacity-40 cursor-not-allowed hover:bg-transparent hover:text-slate-400 hover:border-transparent',
+              )}
             >
-              <section.icon size={16} />
-              <span className="whitespace-nowrap">{section.label}</span>
+              <item.icon size={16} />
+              <span className="whitespace-nowrap">{item.label}</span>
             </button>
           ))}
-        </div>
+        </nav>
 
+        <div className="flex-1 min-w-0">
+        {section === 'pricing' ? <QuotePricingView /> : (
         <div className="space-y-10">
           <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-3xl space-y-8 shadow-sm">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
@@ -200,6 +221,8 @@ export const SettingsView: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+        )}
         </div>
       </div>
     </div>

@@ -210,3 +210,145 @@ export interface ExistingRentalCustomer {
   activeRentalCount: number;
   lastRentalAt: string;
 }
+
+/* ───────────────────────── Cotizaciones ───────────────────────── */
+
+export type QuoteType = 'sale' | 'rental';
+/** "Vencida" no es un estado guardado: se deriva de `valid_until` (ver quoteMath.isQuoteExpired). */
+export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'cancelled';
+export type QuoteLineKind = 'container' | 'delivery' | 'loading' | 'unloading' | 'other';
+export type PriceCurrency = 'USD' | 'MXN';
+
+export interface ContainerSpecs {
+  length_m: number | null;
+  width_m: number | null;
+  height_m: number | null;
+  capacity_m3: number | null;
+  weight_kg: number | null;
+  max_weight_kg: number | null;
+}
+
+/** Ficha de precio de un equipo. La venta se cotiza normalmente en USD y la renta en MXN por mes. */
+export interface ContainerPrice extends ContainerSpecs {
+  id: string;
+  name: string;
+  mode: QuoteType;
+  product_type: ProductType;
+  condition: ProductCondition;
+  price: number;
+  currency: PriceCurrency;
+  description: string | null;
+  photo_url: string | null;
+  is_active: boolean;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export interface ServicePrice {
+  id: string;
+  kind: QuoteLineKind;
+  name: string;
+  detail: string | null;
+  default_unit_price: number; // MXN, sin IVA
+  applies_to: QuoteType | 'both';
+  sort_order: number;
+  is_active: boolean;
+  updated_at: string;
+}
+
+export interface ExchangeRate {
+  id: string;
+  rate: number; // MXN por 1 USD
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface FolioSeries {
+  quote_type: QuoteType;
+  prefix: string;
+  pad: number;
+  last_number: number;
+}
+
+export interface QuoteItem {
+  id?: string;
+  quote_id?: string;
+  position: number;
+  kind: QuoteLineKind;
+  description: string;
+  detail: string | null;
+  quantity: number;
+  unit_price: number;            // MXN sin IVA (precio efectivo de la cotización)
+  unit_price_usd: number | null; // referencia cuando el precio de lista estaba en USD
+  line_subtotal: number;
+  specs: ContainerSpecs | null;
+  photo_url: string | null;
+}
+
+export interface Quote {
+  id: string;
+  folio: string;
+  quote_type: QuoteType;
+  status: QuoteStatus;
+  lead_id: string;
+  customer_name: string;
+  customer_company: string | null;
+  customer_rfc: string | null;
+  customer_phone: string | null;
+  customer_email: string | null;
+  delivery_location: string | null;
+  issued_on: string;     // YYYY-MM-DD
+  validity_days: number;
+  valid_until: string;   // YYYY-MM-DD
+  currency: 'MXN';
+  exchange_rate: number | null;
+  tax_rate: number;
+  subtotal: number;
+  tax_total: number;
+  total: number;
+  security_deposit: number | null;
+  total_with_deposit: number | null;
+  down_payment_pct: number | null; // venta: % de anticipo
+  terms: string[];
+  required_documents: string | null;
+  seller_name: string;
+  seller_phone: string | null;
+  seller_whatsapp: string | null;
+  seller_email: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  sent_at: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  /** Empieza en 1 y sube con cada edición; las versiones anteriores quedan guardadas en la base. */
+  revision: number;
+  items: QuoteItem[];
+}
+
+export interface CreateQuoteInput {
+  lead_id: string;
+  quote_type: QuoteType;
+  customer_name: string;
+  customer_company?: string | null;
+  customer_rfc?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  delivery_location?: string | null;
+  issued_on: string;
+  validity_days: number;
+  exchange_rate?: number | null;
+  tax_rate: number;
+  security_deposit?: number | null;
+  down_payment_pct?: number | null;
+  terms: string[];
+  required_documents?: string | null;
+  seller_name: string;
+  seller_phone?: string | null;
+  seller_whatsapp?: string | null;
+  seller_email?: string | null;
+  notes?: string | null;
+  items: Array<Omit<QuoteItem, 'id' | 'quote_id' | 'line_subtotal' | 'position'>>;
+}

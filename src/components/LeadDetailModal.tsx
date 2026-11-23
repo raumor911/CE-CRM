@@ -37,6 +37,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import { LeadEditForm } from './modals/LeadEditForm';
+import { QuotesPanel } from './quotes/QuotesPanel';
 
 interface LeadDetailModalProps {
   lead: Lead;
@@ -46,7 +47,7 @@ interface LeadDetailModalProps {
 
 export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose, onUpdate }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'timeline' | 'notes' | 'documents'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'notes' | 'documents' | 'quotes'>('timeline');
   const [newNote, setNewNote] = useState('');
   const [documents, setDocuments] = useState<LeadDocument[]>([]);
   const [activities, setActivities] = useState<LeadActivity[]>([]);
@@ -246,6 +247,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
     { id: 'timeline', label: 'Timeline', icon: History },
     { id: 'notes', label: 'Notas', icon: MessageSquare },
     { id: 'documents', label: 'Documentos', icon: FileText },
+    { id: 'quotes', label: 'Cotizaciones', icon: DollarSign },
   ] as const;
 
   const SENTIMENTS: Lead['sentiment_label'][] = ['Entusiasta', 'Dudoso', 'Preocupado'];
@@ -863,6 +865,17 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                         <Send size={18} />
                       </button>
                     </div>
+                  </motion.div>
+                )}
+
+                {activeTab === 'quotes' && (
+                  <motion.div
+                    key="quotes"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <QuotesPanel lead={lead} />
                   </motion.div>
                 )}
 
