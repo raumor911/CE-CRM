@@ -188,7 +188,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       onDragEnd={handleDragEnd}
     >
       {/* Kanban Desktop / List Mobile */}
-      <div className="flex md:gap-6 overflow-x-hidden md:overflow-x-auto pb-6 scrollbar-hide px-4 md:px-6 py-4 h-full">
+      <div className="flex md:gap-6 overflow-x-hidden md:overflow-x-auto pb-6 px-4 md:px-6 py-4 h-full">
         {/* En desktop mostramos todas */}
         <div className="hidden md:flex gap-6 w-full">
           {STAGES.map((stage) => (

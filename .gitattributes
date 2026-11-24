@@ -1,0 +1,6 @@
+# Saltos de línea consistentes entre Mac y Windows (evita archivos "modificados" por CRLF/LF).
+* text=auto eol=lf
+*.ttf binary
+*.jpg binary
+*.png binary
+*.pdf binary

@@ -562,7 +562,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                 </div>
                 <div className="flex items-center gap-3 text-zinc-600">
                   <Calendar size={16} />
-                  <span className="text-sm">Creado: {new Date(lead.created_at || '').toLocaleDateString()}</span>
+                  <span className="text-sm">Creado: {new Date(lead.created_at || '').toLocaleDateString('es-MX')}</span>
                 </div>
               </div>
             </div>
@@ -907,7 +907,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose,
                               <div className="min-w-0">
                                 <p className="text-sm font-bold text-zinc-900 truncate group-hover:text-indigo-900 transition-colors">{doc.file_name}</p>
                                 <p className="text-[10px] text-zinc-500">
-                                  {(doc.file_size / 1024 / 1024).toFixed(2)} MB • {new Date(doc.created_at).toLocaleDateString()}
+                                  {(doc.file_size / 1024 / 1024).toFixed(2)} MB • {new Date(doc.created_at).toLocaleDateString('es-MX')}
                                 </p>
                               </div>
                             </div>

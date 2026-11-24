@@ -30,7 +30,7 @@ export const CostOfWaitDashboard: React.FC<CostOfWaitDashboardProps> = ({ leads 
         </div>
         <div>
           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Costo de Espera Est.</p>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">${(totalPotentialLoss * 0.05).toLocaleString()}</p>
+          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">${(totalPotentialLoss * 0.05).toLocaleString('es-MX')}</p>
         </div>
       </div>
 

@@ -557,7 +557,7 @@ export const ProductDetailPanel: React.FC<ProductDetailPanelProps> = ({
                                   <div className="absolute -left-[21px] top-1.5 w-3 h-3 rounded-full bg-white border-2 border-zinc-200" />
                                   <div className="space-y-1">
                                     <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
-                                      {formatLocalDate(h.created_at)} • {new Date(h.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      {formatLocalDate(h.created_at)} • {new Date(h.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                     <p className="text-xs font-bold text-zinc-900 tracking-tight leading-snug">{h.description}</p>
                                   </div>

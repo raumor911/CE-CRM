@@ -1,8 +1,12 @@
 import { supabase } from './supabase';
 import { Lead } from '../types';
 
+/** Divide el texto en líneas aceptando \n (Mac/Linux), \r\n (Windows/Excel) y \r, y quita el BOM de UTF-8 que agrega Excel. */
+export const splitCsvLines = (csvText: string): string[] =>
+  csvText.replace(/^\uFEFF/, '').split(/\r\n|\n|\r/);
+
 export const importLeadsFromCSV = async (csvText: string, targetStage: 'Ingreso' | 'Briefing' | 'Propuesta' | 'Cierre' = 'Ingreso') => {
-  const lines = csvText.split('\n');
+  const lines = splitCsvLines(csvText);
   // Find the header line to start parsing
   const headerIndex = lines.findIndex(l => l.includes('Oportunidad_ID') && l.includes('Nombre'));
   if (headerIndex === -1) return { success: false, message: 'No se encontró la fila de encabezados.' };

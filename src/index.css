@@ -43,6 +43,13 @@
   body {
     @apply antialiased;
   }
+
+  /* Windows muestra siempre barras gruesas (en Mac son flotantes y se ocultan). Se unifican delgadas en Chrome y Firefox.
+     Está en @layer base, así que .scrollbar-hide (sin capa) la sigue sobrescribiendo donde se quiera ocultar. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
 }
 
 @layer utilities {
