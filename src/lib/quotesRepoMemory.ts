@@ -5,7 +5,8 @@ import type {
 } from '../types';
 
 let seq = 0;
-const uid = (p: string) => `${p}-${++seq}`;
+// Los ids nuevos llevan "n" para no chocar con los datos de ejemplo (sp-1, cp-1…), que antes se pisaban al crear.
+const uid = (p: string) => `${p}-n${++seq}`;
 const nowIso = () => new Date().toISOString();
 
 /** Repositorio con datos SINTÉTICOS para la vista previa de desarrollo. No toca Supabase. */
@@ -119,6 +120,12 @@ export function createMemoryQuotesRepo(): QuotesRepo {
       return delay(row);
     },
     listServicePrices: async () => delay(services),
+    deleteServicePrice: async id => {
+      const i = services.findIndex(s => s.id === id);
+      if (i < 0) throw new Error('No se pudo eliminar el servicio. Es posible que ya no exista.');
+      services.splice(i, 1);
+      return delay(undefined);
+    },
     saveServicePrice: async input => {
       const row: ServicePrice = { ...input, id: input.id ?? uid('sp'), updated_at: nowIso() };
       const i = services.findIndex(c => c.id === row.id);

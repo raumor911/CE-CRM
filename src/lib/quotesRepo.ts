@@ -23,6 +23,8 @@ export interface QuotesRepo {
   saveContainerPrice(input: ContainerPriceInput): Promise<ContainerPrice>;
   listServicePrices(): Promise<ServicePrice[]>;
   saveServicePrice(input: ServicePriceInput): Promise<ServicePrice>;
+  /** Baja de un servicio del catálogo. Las cotizaciones ya emitidas no cambian (guardan su propia copia). */
+  deleteServicePrice(id: string): Promise<void>;
   listExchangeRates(): Promise<ExchangeRate[]>;
   addExchangeRate(rate: number, note: string | null): Promise<ExchangeRate>;
   listFolioSeries(): Promise<FolioSeries[]>;
@@ -122,6 +124,12 @@ export const supabaseQuotesRepo: QuotesRepo = {
     const { data, error } = await supabase.from('quote_service_prices').select('*').order('sort_order').order('name');
     if (error) throw error;
     return data as ServicePrice[];
+  },
+  async deleteServicePrice(id) {
+    const { data, error } = await supabase.from('quote_service_prices').delete().eq('id', id).select('id');
+    if (error) throw error;
+    // Sin permiso, la base no marca error: simplemente no borra nada. Se avisa en vez de aparentar éxito.
+    if (!data || data.length === 0) throw new Error('No se pudo eliminar el servicio. Es posible que ya no exista o que falte aplicar la migración de bajas.');
   },
   async saveServicePrice(input) {
     const row = { ...input, updated_at: new Date().toISOString() };

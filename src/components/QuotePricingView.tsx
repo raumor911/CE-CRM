@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertCircle, Check, Loader2, Pencil, Plus, X } from 'lucide-react';
+import { AlertCircle, Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { ContainerPrice, PriceCurrency, ProductCondition, ProductType, QuoteLineKind, QuoteType, ServicePrice } from '../types';
 import type { ContainerPriceInput, ServicePriceInput } from '../lib/quotesRepo';
 import { useQuotePricing } from '../hooks/useQuotePricing';
@@ -237,9 +237,19 @@ const ServiceForm: React.FC<{ initial: ServicePriceInput; onSave: (v: ServicePri
 
 const ServicesSection: React.FC<{ p: ReturnType<typeof useQuotePricing> }> = ({ p }) => {
   const [editing, setEditing] = useState<ServicePriceInput | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const remove = async (s: ServicePrice) => {
+    if (!window.confirm(`¿Eliminar el servicio «${s.name}»? Dejará de sugerirse al cotizar. Las cotizaciones que ya hiciste no cambian.\n\nSi solo quieres dejar de usarlo por ahora, mejor edítalo y desmarca «Se sugiere al cotizar».`)) return;
+    setRemovingId(s.id); setRemoveError(null);
+    try { await p.deleteService(s.id); }
+    catch (x: any) { setRemoveError(x?.message ?? 'No se pudo eliminar el servicio.'); }
+    finally { setRemovingId(null); }
+  };
   const applies = { sale: 'Venta', rental: 'Renta', both: 'Ambas' } as const;
   return (
     <div className="space-y-4">
+      <ErrorNote message={removeError} />
       <div className="flex justify-end"><button type="button" onClick={() => setEditing(emptyService())} className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700"><Plus size={16} /> Agregar servicio</button></div>
       <div className="overflow-x-auto rounded-2xl border border-zinc-200">
         <table className="w-full text-sm">
@@ -252,7 +262,12 @@ const ServicesSection: React.FC<{ p: ReturnType<typeof useQuotePricing> }> = ({ 
                 <td className="p-3">{applies[s.applies_to]}</td>
                 <td className="p-3 text-right tabular-nums font-semibold">{formatMoney(s.default_unit_price)}</td>
                 <td className="p-3"><span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', s.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500')}>{s.is_active ? 'Activo' : 'Inactivo'}</span></td>
-                <td className="p-3 text-right"><button type="button" onClick={() => setEditing(s)} aria-label={`Editar ${s.name}`} className="p-2 text-zinc-400 hover:text-indigo-600"><Pencil size={16} /></button></td>
+                <td className="p-3 text-right whitespace-nowrap">
+                  <button type="button" onClick={() => setEditing(s)} aria-label={`Editar ${s.name}`} title="Editar" className="p-2 text-zinc-400 hover:text-indigo-600"><Pencil size={16} /></button>
+                  <button type="button" disabled={removingId === s.id} onClick={() => void remove(s)} aria-label={`Eliminar ${s.name}`} title="Eliminar" className="p-2 text-zinc-400 hover:text-rose-600 disabled:opacity-40">
+                    {removingId === s.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
