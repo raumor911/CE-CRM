@@ -55,7 +55,7 @@ const s = StyleSheet.create({
 
   unit: { marginTop: 10, paddingVertical: 10, borderTopWidth: 1.5, borderTopColor: C.steel, borderBottomWidth: 0.75, borderBottomColor: C.line, flexDirection: 'row' },
   photoBox: { width: 138, height: 124, backgroundColor: C.mist, marginRight: 16 },
-  photo: { width: 138, height: 124, objectFit: 'cover' },
+  photo: { width: 138, height: 124, objectFit: 'contain' },
   unitName: { fontFamily: 'BarlowCondensed', fontWeight: 600, fontSize: 18, lineHeight: 1.05, color: C.steel },
   specs: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 7 },
   spec: { width: '33.33%', marginBottom: 5 },
