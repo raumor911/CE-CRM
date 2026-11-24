@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Lead, Sentiment } from '../types';
+import { copyToClipboard } from '../lib/clipboard';
 
 export function useLeadAutomation() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -20,7 +21,7 @@ export function useLeadAutomation() {
     const link = `${window.location.origin}/propuesta/${lead.id}`;
     const template = `¡Hola! Aquí puedes ver la propuesta para ${lead.project_name}: ${link}`;
     
-    navigator.clipboard.writeText(template);
+    void copyToClipboard(template); // si el navegador lo niega, el texto igual se devuelve para mostrarlo
     return template;
   }, []);
 

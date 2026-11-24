@@ -87,12 +87,12 @@ export const LeadEditForm: React.FC<LeadEditFormProps> = ({ onClose, lead, onUpd
               <div className="flex items-center gap-4 p-3 bg-zinc-50 rounded-2xl border border-zinc-100">
                 <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                   <Calendar size={12} />
-                  Creado: {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
+                  Creado: {lead.created_at ? new Date(lead.created_at).toLocaleDateString('es-MX') : 'N/A'}
                 </div>
                 <div className="w-1 h-1 rounded-full bg-zinc-300" />
                 <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                   <Clock size={12} />
-                  Actividad: {new Date(lead.last_activity).toLocaleDateString()}
+                  Actividad: {new Date(lead.last_activity).toLocaleDateString('es-MX')}
                 </div>
               </div>
 

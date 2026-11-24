@@ -4,8 +4,9 @@ import {
   addDaysIso, amountToSpanishWords, calculateTotals, canEdit, canTransition, formatFolio, integerToSpanish,
   isQuoteExpired, priceInMxn, quoteMatchesQuery, splitDownPayment, summarizeProducts, validateQuoteInput,
 } from '../src/lib/quoteMath';
+import { splitCsvLines } from '../src/lib/importLeads';
 import {
-  buildShareMessage, buildShareSubject, mailtoUrl, normalizeEmail, normalizeWhatsAppPhone, whatsappUrl,
+  buildShareMessage, buildShareSubject, gmailComposeUrl, mailtoUrl, normalizeEmail, normalizeWhatsAppPhone, whatsappUrl,
 } from '../src/lib/quoteShare';
 import { createMemoryQuotesRepo } from '../src/lib/quotesRepoMemory';
 import type { CreateQuoteInput, Quote } from '../src/types';
@@ -204,4 +205,35 @@ test('histórico: resumen de productos y búsqueda sin acentos', () => {
   assert.equal(quoteMatchesQuery(quote, 'bodegas'), true);
   assert.equal(quoteMatchesQuery(quote, 'logistica'), false); // los servicios no se buscan como producto
   assert.equal(quoteMatchesQuery(quote, 'monterrey'), false);
+});
+
+test('compatibilidad: CSV con saltos de línea de Windows y BOM de Excel', () => {
+  assert.deepEqual(splitCsvLines('a,b\nc,d'), ['a,b', 'c,d']);
+  assert.deepEqual(splitCsvLines('a,b\r\nc,d\r\n'), ['a,b', 'c,d', '']);
+  assert.deepEqual(splitCsvLines('a,b\rc,d'), ['a,b', 'c,d']);
+  assert.deepEqual(splitCsvLines('﻿Oportunidad_ID,Nombre\r\n1,Sergio'), ['Oportunidad_ID,Nombre', '1,Sergio']);
+  // La última columna ya no arrastra un "\r" invisible.
+  assert.ok(splitCsvLines('x,Cierre\r\n').every(line => !line.includes('\r')));
+});
+
+test('compatibilidad: enlace de redacción en Gmail', () => {
+  assert.equal(
+    gmailComposeUrl('a@b.com', 'Cotización 1', 'hola mundo'),
+    'https://mail.google.com/mail/?view=cm&fs=1&to=a%40b.com&su=Cotizaci%C3%B3n%201&body=hola%20mundo',
+  );
+});
+
+test('servicios: alta, cambio y baja del catálogo', async () => {
+  const repo = createMemoryQuotesRepo();
+  const before = (await repo.listServicePrices()).length;
+  const created = await repo.saveServicePrice({
+    kind: 'other', name: 'Gestoría de permisos', detail: null, default_unit_price: 800, applies_to: 'both', sort_order: 9, is_active: true,
+  });
+  assert.equal((await repo.listServicePrices()).length, before + 1);
+  const changed = await repo.saveServicePrice({ ...created, default_unit_price: 950 });
+  assert.equal(changed.id, created.id);
+  assert.equal((await repo.listServicePrices()).find(s => s.id === created.id)?.default_unit_price, 950);
+  await repo.deleteServicePrice(created.id);
+  assert.equal((await repo.listServicePrices()).length, before);
+  await assert.rejects(repo.deleteServicePrice(created.id), /No se pudo eliminar/);
 });

@@ -51,6 +51,11 @@ export function whatsappUrl(phone: string, message: string): string {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
+/** Redacción de correo en Gmail web: sirve cuando el equipo (típico en Windows) no tiene una app de correo configurada. */
+export function gmailComposeUrl(email: string, subject: string, body: string): string {
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 export function mailtoUrl(email: string, subject: string, body: string): string {
   const crlf = body.replace(/\r?\n/g, '\r\n');
   return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(crlf)}`;

@@ -36,6 +36,7 @@ export function useQuotePricing() {
     containers, services, rates, series, loading, error, reload, currentRate,
     saveContainer: async (input: ContainerPriceInput) => { const r = await repo.saveContainerPrice(input); await reload(); return r; },
     saveService: async (input: ServicePriceInput) => { const r = await repo.saveServicePrice(input); await reload(); return r; },
+    deleteService: async (id: string) => { await repo.deleteServicePrice(id); await reload(); },
     addRate: async (rate: number, note: string | null) => { const r = await repo.addExchangeRate(rate, note); await reload(); return r; },
     setNextFolio: async (type: QuoteType, next: number) => { const r = await repo.setNextFolioNumber(type, next); await reload(); return r; },
   };

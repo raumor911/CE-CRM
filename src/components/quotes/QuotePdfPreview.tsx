@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, Download, Loader2, Mail, MessageCircle, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, Download, Loader2, Mail, MessageCircle, X } from 'lucide-react';
 import type { Quote } from '../../types';
 import { downloadBlob, generateQuotePdf, quotePdfFileName } from '../../lib/quotePdf';
 import {
-  buildShareMessage, buildShareSubject, mailtoUrl, normalizeEmail, normalizeWhatsAppPhone, whatsappUrl,
+  buildShareMessage, buildShareSubject, gmailComposeUrl, mailtoUrl, normalizeEmail, normalizeWhatsAppPhone, whatsappUrl,
 } from '../../lib/quoteShare';
 
 export const QuotePdfPreview: React.FC<{ quote: Quote; onClose: () => void }> = ({ quote, onClose }) => {
@@ -11,13 +11,15 @@ export const QuotePdfPreview: React.FC<{ quote: Quote; onClose: () => void }> = 
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [mailMenu, setMailMenu] = useState(false);
 
   const phone = normalizeWhatsAppPhone(quote.customer_phone);
   const email = normalizeEmail(quote.customer_email);
 
   // El enlace de WhatsApp o de correo no puede llevar el archivo: se descarga el PDF y se abre el mensaje ya redactado.
-  const share = (channel: 'whatsapp' | 'email') => {
+  const share = (channel: 'whatsapp' | 'email' | 'gmail') => {
     if (!blob) return;
+    setMailMenu(false);
     const fileName = quotePdfFileName(quote);
     downloadBlob(blob, fileName);
     const message = buildShareMessage(quote);
@@ -26,7 +28,10 @@ export const QuotePdfPreview: React.FC<{ quote: Quote; onClose: () => void }> = 
       setNotice(`Se descargó ${fileName}. Adjúntalo en la conversación de WhatsApp con +${phone} antes de enviar.`);
     } else if (channel === 'email' && email) {
       window.location.href = mailtoUrl(email, buildShareSubject(quote), message);
-      setNotice(`Se descargó ${fileName}. Adjúntalo al correo para ${email} antes de enviar.`);
+      setNotice(`Se descargó ${fileName}. Adjúntalo al correo para ${email} antes de enviar. Si no se abrió tu app de correo, usa "Abrir en Gmail".`);
+    } else if (channel === 'gmail' && email) {
+      window.open(gmailComposeUrl(email, buildShareSubject(quote), message), '_blank', 'noopener');
+      setNotice(`Se descargó ${fileName}. Adjúntalo al correo de Gmail para ${email} antes de enviar.`);
     }
   };
 
@@ -62,13 +67,31 @@ export const QuotePdfPreview: React.FC<{ quote: Quote; onClose: () => void }> = 
             >
               <MessageCircle size={16} /> WhatsApp
             </button>
-            <button
-              type="button" disabled={!blob || !email} onClick={() => share('email')}
-              title={email ? `Enviar por correo a ${email}` : 'El cliente no tiene un correo válido en esta cotización'}
-              className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Mail size={16} /> Correo
-            </button>
+            <div className="relative" onKeyDown={e => { if (e.key === 'Escape') setMailMenu(false); }}>
+              <button
+                type="button" disabled={!blob || !email} onClick={() => setMailMenu(open => !open)}
+                aria-haspopup="menu" aria-expanded={mailMenu}
+                title={email ? `Enviar por correo a ${email}` : 'El cliente no tiene un correo válido en esta cotización'}
+                className="px-4 py-2 bg-zinc-900 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Mail size={16} /> Correo <ChevronDown size={14} />
+              </button>
+              {mailMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMailMenu(false)} aria-hidden="true" />
+                  <div role="menu" className="absolute right-0 top-full mt-2 z-20 w-64 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-xl">
+                    <button role="menuitem" type="button" onClick={() => share('email')} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-zinc-800 hover:bg-zinc-100">
+                      Abrir en mi app de correo
+                      <span className="block text-xs font-normal text-zinc-500">Outlook, Correo de Windows, Mail…</span>
+                    </button>
+                    <button role="menuitem" type="button" onClick={() => share('gmail')} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-zinc-800 hover:bg-zinc-100">
+                      Abrir en Gmail
+                      <span className="block text-xs font-normal text-zinc-500">Se abre en una pestaña nueva del navegador</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button
               type="button" disabled={!blob} onClick={() => blob && downloadBlob(blob, quotePdfFileName(quote))}
               className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 disabled:opacity-40"
@@ -102,6 +125,11 @@ export const QuotePdfPreview: React.FC<{ quote: Quote; onClose: () => void }> = 
           )}
           {url && <iframe title={`PDF ${quote.folio}`} src={url} className="w-full h-full border-0" />}
         </div>
+        {url && (
+          <p className="px-5 py-2 text-[11px] text-zinc-500 border-t border-zinc-100 bg-white">
+            ¿No ves el PDF aquí? Tu navegador puede tener desactivado su visor de PDF: usa «Descargar PDF».
+          </p>
+        )}
       </div>
     </div>
   );

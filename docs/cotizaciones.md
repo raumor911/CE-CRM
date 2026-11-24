@@ -4,7 +4,7 @@ Genera cotizaciones en PDF desde un lead del pipeline, las guarda en la base de 
 
 ## Qué hace
 - **Pipeline → detalle del lead → pestaña "Cotizaciones"**: crea una cotización de venta o renta (según la categoría del lead), la guarda con su folio y descarga o abre el PDF.
-- **Precios y cotizaciones** (Ajustes → Precios y cotizaciones): catálogo de contenedores (precio y fichas técnicas), servicios (flete y maniobras), tipo de cambio USD→MXN con historial y series de folio.
+- **Precios y cotizaciones** (Ajustes → Precios y cotizaciones): catálogo de contenedores (precio y fichas técnicas), servicios (flete y maniobras; altas, bajas y cambios; la baja requiere `20261123020000_quotes_service_delete.sql`), tipo de cambio USD→MXN con historial y series de folio.
 - Cada cotización conserva una copia fija de los datos del cliente, los precios y los términos con los que se hizo. Cambiar el catálogo después no altera cotizaciones ya emitidas.
 - Estados: borrador → enviada → aceptada / rechazada / cancelada. "Vencida" se calcula por la fecha de vigencia, no se guarda. Lo enviado no se edita: se duplica para hacer una nueva (otro folio).
 - Enviar la cotización al cliente es manual. El sistema solo marca "enviada".

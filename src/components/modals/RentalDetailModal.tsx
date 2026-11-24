@@ -122,7 +122,7 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
                   <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 flex items-start gap-3">
                     <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={16} />
                     <p className="text-xs text-rose-700 font-medium">
-                      El contrato ha vencido (Vencimiento: {new Date(rental.contractual_end_date!).toLocaleDateString()}).
+                      El contrato ha vencido (Vencimiento: {new Date(rental.contractual_end_date!).toLocaleDateString('es-MX')}).
                     </p>
                   </div>
                 )}
@@ -136,7 +136,7 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
                   <Calendar size={12} /> Inicio
                 </span>
                 <p className="text-sm font-semibold text-zinc-900">
-                  {new Date(rental.start_date).toLocaleDateString()}
+                  {new Date(rental.start_date).toLocaleDateString('es-MX')}
                 </p>
               </div>
               <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-1">
@@ -144,7 +144,7 @@ export const RentalDetailModal: React.FC<RentalDetailModalProps> = ({
                   <Calendar size={12} /> Vencimiento
                 </span>
                 <p className="text-sm font-semibold text-zinc-900">
-                  {rental.contractual_end_date ? new Date(rental.contractual_end_date).toLocaleDateString() : 'N/A'}
+                  {rental.contractual_end_date ? new Date(rental.contractual_end_date).toLocaleDateString('es-MX') : 'N/A'}
                 </p>
               </div>
               <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100 space-y-1 col-span-2">
