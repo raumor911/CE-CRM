@@ -33,7 +33,19 @@ export function createMemoryQuotesRepo(): QuotesRepo {
     {
       id: 'cp-4', name: '40 HC usado', mode: 'rental', product_type: '40 HC', condition: 'Usado', price: 7800, currency: 'MXN',
       length_m: 12, width_m: 2.4, height_m: 2.9, capacity_m3: 76, weight_kg: 3800, max_weight_kg: 28600,
-      description: 'High cube, acero, doble cerrojo', photo_url: '/media/containers/20dc-estandar.jpg',
+      description: 'High cube, acero, doble cerrojo', photo_url: '/media/containers/40dc-usado.png',
+      is_active: true, updated_at: nowIso(), updated_by: null,
+    },
+    {
+      id: 'cp-5', name: '40 DC usado', mode: 'sale', product_type: '40 DC', condition: 'Usado', price: 3800, currency: 'USD',
+      length_m: 12, width_m: 2.4, height_m: 2.5, capacity_m3: 67.7, weight_kg: 3680, max_weight_kg: 32500,
+      description: 'Acero, doble cerrojo de seguridad', photo_url: '/media/containers/40dc-usado.png',
+      is_active: true, updated_at: nowIso(), updated_by: null,
+    },
+    {
+      id: 'cp-6', name: '40 HC usado', mode: 'sale', product_type: '40 HC', condition: 'Usado', price: 4200, currency: 'USD',
+      length_m: 12, width_m: 2.4, height_m: 2.9, capacity_m3: 76, weight_kg: 3800, max_weight_kg: 28600,
+      description: 'High cube, acero, doble cerrojo de seguridad', photo_url: '/media/containers/40dc-usado.png',
       is_active: true, updated_at: nowIso(), updated_by: null,
     },
   ];
